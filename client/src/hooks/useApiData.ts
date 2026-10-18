@@ -8,6 +8,7 @@ interface ApiDataState<T> {
   refresh: () => void;
 }
 
+// Load a list resource, ignore stale responses after cleanup, and expose refresh/loading/error state.
 export function useApiData<T>(
   path: string | null,
   token?: string,
@@ -19,6 +20,7 @@ export function useApiData<T>(
     error: string | null;
   }>({ requestKey: "", data: [], error: null });
   const [requestVersion, setRequestVersion] = useState(0);
+  // Include the account and refresh counter so old data is not shown for a new request.
   const requestKey = path ? JSON.stringify([path, userId, requestVersion]) : "";
 
   const refresh = useCallback(() => {

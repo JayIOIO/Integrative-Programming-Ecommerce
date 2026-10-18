@@ -1,3 +1,4 @@
+// Data shapes returned by the Express API and used by the storefront.
 export interface User {
   id: number;
   name: string;
@@ -25,6 +26,7 @@ export interface Order {
   status: string;
 }
 
+// Form value shapes shared with the authentication, checkout, and profile flows.
 export interface AuthForm {
   name: string;
   email: string;

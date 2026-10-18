@@ -6,10 +6,11 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
+
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
   : undefined;
-
+// Log each completed request, then enable cross-origin calls and JSON request bodies.
 app.use((req, res, next) => {
   const startedAt = Date.now();
   res.on('finish', () => {
@@ -20,6 +21,7 @@ app.use((req, res, next) => {
 app.use(cors(allowedOrigins ? { origin: allowedOrigins } : undefined));
 app.use(express.json());
 
+// Reuse pooled MySQL connections instead of opening one for every query.
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -32,6 +34,7 @@ const pool = mysql.createPool({
 const paymentMethods = new Set(['Credit Card', 'PayPal', 'Cash on Delivery']);
 const orderStatuses = new Set(['Pending', 'Processing', 'Shipped', 'Delivered']);
 
+// Treat incoming JSON as untrusted until it is confirmed to be a plain object.
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -43,11 +46,13 @@ function getJwtSecret() {
   return process.env.JWT_SECRET;
 }
 
+// Log detailed failures on the server without exposing database or token internals to clients.
 function reportServerError(res, context, error) {
   console.error(`${context}:`, error);
   return res.status(500).json({ error: 'An unexpected server error occurred.' });
 }
 
+// Verify the bearer token and make its signed-in user details available to protected routes.
 function authenticateToken(req, res, next) {
   const authorization = req.headers.authorization;
   const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
@@ -55,6 +60,7 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
+  // Verify the token and ensure it contains the expected user fields.
   try {
     const user = jwt.verify(token, getJwtSecret());
     if (
@@ -66,6 +72,7 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
 
+    // Attach the user details to the request object for downstream handlers.
     req.user = user;
     return next();
   } catch (error) {
@@ -76,13 +83,17 @@ function authenticateToken(req, res, next) {
   }
 }
 
+// Validate registration fields, hash the password, save the user, and issue a JWT.
 async function signupHandler(req, res) {
+  // Ensure the request body is a plain object and extract the expected fields.
   const body = isRecord(req.body) ? req.body : {};
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const password = typeof body.password === 'string' ? body.password : '';
   const fields = {};
 
+
+  // Validate the input fields and return errors for any that are invalid.
   if (name.length < 2 || name.length > 100) fields.name = 'Name must be between 2 and 100 characters.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fields.email = 'Enter a valid email address.';
   if (password.length < 6) fields.password = 'Password must be at least 6 characters.';
@@ -90,6 +101,7 @@ async function signupHandler(req, res) {
     return res.status(400).json({ error: 'Please correct the highlighted fields.', fields });
   }
 
+  // Hash the password and insert the new user into the database, then sign a JWT for the new account.
   try {
     const jwtSecret = getJwtSecret();
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -111,6 +123,7 @@ async function signupHandler(req, res) {
   }
 }
 
+// Match the submitted credentials against the stored password hash before issuing a JWT.
 async function loginHandler(req, res) {
   const body = isRecord(req.body) ? req.body : {};
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -141,15 +154,69 @@ async function loginHandler(req, res) {
   }
 }
 
+// Search the catalog and optionally constrain results to a price range.
 async function listProductsHandler(req, res) {
+  const fields = {};
+  const search = req.query.search === undefined
+    ? ''
+    : typeof req.query.search === 'string' ? req.query.search.trim() : null;
+  const minPrice = req.query.minPrice === undefined || req.query.minPrice === ''
+    ? undefined
+    : typeof req.query.minPrice === 'string' ? Number(req.query.minPrice) : NaN;
+  const maxPrice = req.query.maxPrice === undefined || req.query.maxPrice === ''
+    ? undefined
+    : typeof req.query.maxPrice === 'string' ? Number(req.query.maxPrice) : NaN;
+
+  if (search === null || (search !== null && search.length > 100)) {
+    fields.search = 'Search must be text with at most 100 characters.';
+  }
+  if (minPrice !== undefined && (!Number.isFinite(minPrice) || minPrice < 0)) {
+    fields.minPrice = 'Minimum price must be a non-negative number.';
+  }
+  if (maxPrice !== undefined && (!Number.isFinite(maxPrice) || maxPrice < 0)) {
+    fields.maxPrice = 'Maximum price must be a non-negative number.';
+  }
+  if (
+    minPrice !== undefined &&
+    maxPrice !== undefined &&
+    Number.isFinite(minPrice) &&
+    Number.isFinite(maxPrice) &&
+    minPrice > maxPrice
+  ) {
+    fields.maxPrice = 'Maximum price must be greater than or equal to minimum price.';
+  }
+  if (Object.keys(fields).length > 0) {
+    return res.status(400).json({ error: 'Invalid product search or price filter.', fields });
+  }
+
   try {
-    const [products] = await pool.query('SELECT * FROM products ORDER BY id DESC');
+    const conditions = [];
+    const values = [];
+    if (search) {
+      conditions.push('(name LIKE ? OR description LIKE ?)');
+      values.push(`%${search}%`, `%${search}%`);
+    }
+    if (minPrice !== undefined) {
+      conditions.push('price >= ?');
+      values.push(minPrice);
+    }
+    if (maxPrice !== undefined) {
+      conditions.push('price <= ?');
+      values.push(maxPrice);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const [products] = await pool.execute(
+      `SELECT * FROM products ${whereClause} ORDER BY id DESC`,
+      values,
+    );
     return res.status(200).json(products);
   } catch (error) {
     return reportServerError(res, 'Product listing failed', error);
   }
 }
 
+// Validate and insert a new product; the route requires a valid login token.
 async function createProductHandler(req, res) {
   const body = isRecord(req.body) ? req.body : {};
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -180,6 +247,7 @@ async function createProductHandler(req, res) {
   }
 }
 
+// Validate checkout input and create the order and stock changes as one transaction.
 async function createOrderHandler(req, res) {
   const body = isRecord(req.body) ? req.body : {};
   const address = typeof body.address === 'string' ? body.address.trim() : '';
@@ -224,6 +292,7 @@ async function createOrderHandler(req, res) {
     const orderItems = [];
     let totalAmount = 0;
     for (const item of cartItems) {
+      // Lock each product while checking stock and price to prevent overselling.
       const [products] = await connection.execute(
         'SELECT id, price, stock FROM products WHERE id = ? FOR UPDATE',
         [item.id],
@@ -245,6 +314,7 @@ async function createOrderHandler(req, res) {
       }
 
       const price = Number(product.price);
+      // Use database prices instead of values sent by the browser.
       totalAmount += price * item.quantity;
       orderItems.push({ id: item.id, quantity: item.quantity, price });
     }
@@ -271,6 +341,7 @@ async function createOrderHandler(req, res) {
   } catch (error) {
     if (connection) {
       try {
+        // Keep the original failure as the response if rollback itself also fails.
         await connection.rollback();
       } catch (rollbackError) {
         console.error('Order rollback failed:', rollbackError);
@@ -282,6 +353,7 @@ async function createOrderHandler(req, res) {
   }
 }
 
+// Return only orders owned by the authenticated user.
 async function listOrdersHandler(req, res) {
   try {
     const [orders] = await pool.execute(
@@ -294,6 +366,7 @@ async function listOrdersHandler(req, res) {
   }
 }
 
+// Look up one order without revealing records that belong to another account.
 async function getOrderHandler(req, res) {
   const orderId = Number(req.params.id);
   if (!Number.isInteger(orderId) || orderId < 1) {
@@ -314,6 +387,7 @@ async function getOrderHandler(req, res) {
   }
 }
 
+// Allow only known order statuses and update only the current user's order.
 async function updateOrderHandler(req, res) {
   const orderId = Number(req.params.id);
   const status = isRecord(req.body) ? req.body.status : undefined;
@@ -338,6 +412,7 @@ async function updateOrderHandler(req, res) {
   }
 }
 
+// Save the new display name and sign a replacement token with the updated name.
 async function updateProfileHandler(req, res) {
   const name = isRecord(req.body) && typeof req.body.name === 'string'
     ? req.body.name.trim()
@@ -367,6 +442,7 @@ async function updateProfileHandler(req, res) {
   }
 }
 
+// Delete an order only when it belongs to the authenticated user.
 async function deleteOrderHandler(req, res) {
   const orderId = Number(req.params.id);
   if (!Number.isInteger(orderId) || orderId < 1) {
@@ -387,6 +463,7 @@ async function deleteOrderHandler(req, res) {
   }
 }
 
+// Return consistent JSON errors for unknown API paths and malformed requests.
 function notFoundHandler(req, res) {
   return res.status(404).json({ error: 'API route not found.' });
 }
@@ -402,6 +479,8 @@ function requestErrorHandler(error, req, res, next) {
   return reportServerError(res, 'Request failed', error);
 }
 
+// Register named handlers so validation and route behavior stay easy to locate.
+// Keep route paths grouped together so the API surface is easy to audit.
 app.post('/api/auth/signup', signupHandler);
 app.post('/api/auth/login', loginHandler);
 app.get('/api/products', listProductsHandler);

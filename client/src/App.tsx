@@ -1,6 +1,9 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { api, getApiErrorMessage, getApiFieldErrors } from "./api/axios";
 import { useApiData } from "./hooks/useApiData";
+import { createAuthSchema, profileSchema } from "./validation/schemas";
 import type {
   AuthForm,
   CartItem,
@@ -13,6 +16,7 @@ import type {
 } from "./types";
 import "./App.css";
 
+// Restore a session only when the saved user record has the fields the UI relies on.
 function readStoredUser(): User | null {
   const storedUser = localStorage.getItem("user");
   if (!storedUser) return null;
@@ -39,31 +43,100 @@ function readStoredUser(): User | null {
   return null;
 }
 
+// Keep each account's cart separate when multiple people use the same browser.
+function getCartStorageKey(userId: number): string {
+  return `cart:${userId}`;
+}
+
+// Local storage is untyped, so validate saved cart data before using it in the UI.
+function readStoredCart(userId: number): CartItem[] {
+  const storedCart = localStorage.getItem(getCartStorageKey(userId));
+  if (!storedCart) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(storedCart);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every(
+        (item) =>
+          typeof item === "object" &&
+          item !== null &&
+          "id" in item &&
+          Number.isInteger(item.id) &&
+          "name" in item &&
+          typeof item.name === "string" &&
+          "price" in item &&
+          (typeof item.price === "number" || typeof item.price === "string") &&
+          Number.isFinite(Number(item.price)) &&
+          "quantity" in item &&
+          Number.isInteger(item.quantity) &&
+          item.quantity > 0,
+      )
+    ) {
+      return parsed as CartItem[];
+    }
+  } catch (error) {
+    console.error("Stored cart data could not be read:", error);
+  }
+
+  localStorage.removeItem(getCartStorageKey(userId));
+  return [];
+}
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token") ?? "");
   const [user, setUser] = useState<User | null>(readStoredUser);
   const [isSignup, setIsSignup] = useState(false);
   const [activeTab, setActiveTab] = useState<StoreTab>("shop");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [authData, setAuthData] = useState<AuthForm>({ name: "", email: "", password: "" });
+  const [productSearch, setProductSearch] = useState("");
+  const [minProductPrice, setMinProductPrice] = useState("");
+  const [maxProductPrice, setMaxProductPrice] = useState("");
+  const [appliedProductFilters, setAppliedProductFilters] = useState({
+    search: "",
+    minPrice: "",
+    maxPrice: "",
+  });
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    user ? readStoredCart(user.id) : [],
+  );
   const [checkoutData, setCheckoutData] = useState<CheckoutForm>({
     address: "",
     payment_method: "Credit Card",
   });
-  const [profileData, setProfileData] = useState<ProfileForm>({ name: "" });
+  const authForm = useForm<AuthForm>({
+    resolver: zodResolver(createAuthSchema(isSignup)),
+    defaultValues: { name: "", email: "", password: "" },
+    mode: "onBlur",
+  });
+  const profileForm = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { name: user?.name ?? "" },
+    mode: "onBlur",
+  });
+  // Keep request, validation, and pending-submit feedback separate for each view.
   const [actionError, setActionError] = useState<string | null>(null);
-  const [authErrors, setAuthErrors] = useState<Partial<Record<keyof AuthForm, string>>>({});
   const [checkoutErrors, setCheckoutErrors] = useState<
     Partial<Record<keyof CheckoutForm | "cartItems", string>>
   >({});
-  const [profileErrors, setProfileErrors] = useState<Partial<Record<keyof ProfileForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Keep the catalog and signed-in user's orders synchronized with the API.
+  const productQuery = new URLSearchParams();
+  if (appliedProductFilters.search) {
+    productQuery.set("search", appliedProductFilters.search);
+  }
+  if (appliedProductFilters.minPrice) {
+    productQuery.set("minPrice", appliedProductFilters.minPrice);
+  }
+  if (appliedProductFilters.maxPrice) {
+    productQuery.set("maxPrice", appliedProductFilters.maxPrice);
+  }
   const {
     data: products,
     loading: productsLoading,
     error: productsError,
     refresh: refreshProducts,
-  } = useApiData<Product>("/products");
+  } = useApiData<Product>(`/products${productQuery.size ? `?${productQuery}` : ""}`);
   const {
     data: orders,
     loading: ordersLoading,
@@ -71,18 +144,18 @@ function App() {
     refresh: refreshOrders,
   } = useApiData<Order>(token ? "/orders" : null, token, user?.id);
 
+  // Persist cart changes without clearing the saved copy during logout.
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(getCartStorageKey(user.id), JSON.stringify(cart));
+    }
+  }, [cart, user]);
+
   const cartTotal = cart.reduce(
     (total, item) => total + Number(item.price) * item.quantity,
     0,
   );
   const authConfig = { headers: { Authorization: `Bearer ${token}` } };
-
-  const handleAuthChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.currentTarget;
-    setAuthData((previous) => ({ ...previous, [name]: value }));
-    setAuthErrors((previous) => ({ ...previous, [name]: undefined }));
-    setActionError(null);
-  };
 
   const handleCheckoutChange = (
     event: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>,
@@ -93,13 +166,23 @@ function App() {
     setActionError(null);
   };
 
-  const handleProfileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.currentTarget;
-    setProfileData((previous) => ({ ...previous, [name]: value }));
-    setProfileErrors((previous) => ({ ...previous, [name]: undefined }));
-    setActionError(null);
+  const handleProductSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAppliedProductFilters({
+      search: productSearch.trim(),
+      minPrice: minProductPrice,
+      maxPrice: maxProductPrice,
+    });
   };
 
+  const clearProductFilters = () => {
+    setProductSearch("");
+    setMinProductPrice("");
+    setMaxProductPrice("");
+    setAppliedProductFilters({ search: "", minPrice: "", maxPrice: "" });
+  };
+
+  // Cart updates use functional state setters to avoid stale values between clicks.
   const addToCart = (product: Product) => {
     setCart((previous) => {
       const existingItem = previous.find((item) => item.id === product.id);
@@ -125,42 +208,27 @@ function App() {
     );
   };
 
-  const handleAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const errors: Partial<Record<keyof AuthForm, string>> = {};
-    if (isSignup && authData.name.trim().length < 2) {
-      errors.name = "Enter a name with at least 2 characters.";
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authData.email.trim())) {
-      errors.email = "Enter a valid email address.";
-    }
-    if (isSignup && authData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters.";
-    } else if (!authData.password) {
-      errors.password = "Enter your password.";
-    }
-    setAuthErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
+  // Zod validates the form before the credentials are sent to the server.
+  const handleAuthSubmit = async (authData: AuthForm) => {
     setActionError(null);
     setIsSubmitting(true);
 
     try {
+      // Restore the cart belonging to the account that just authenticated.
       const endpoint = isSignup ? "/auth/signup" : "/auth/login";
       const response = await api.post<{ token: string; user: User }>(endpoint, authData);
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
       setToken(response.data.token);
       setUser(response.data.user);
-      setProfileData({ name: response.data.user.name });
-      setAuthData({ name: "", email: "", password: "" });
+      setCart(readStoredCart(response.data.user.id));
+      profileForm.reset({ name: response.data.user.name });
+      authForm.reset();
     } catch (error: unknown) {
       const fields = getApiFieldErrors(error);
-      setAuthErrors({
-        name: fields.name,
-        email: fields.email,
-        password: fields.password,
-      });
+      for (const field of ["name", "email", "password"] as const) {
+        if (fields[field]) authForm.setError(field, { message: fields[field] });
+      }
       if (Object.keys(fields).length === 0) {
         setActionError(getApiErrorMessage(error, "Authentication failed."));
       }
@@ -174,11 +242,13 @@ function App() {
     localStorage.removeItem("user");
     setToken("");
     setUser(null);
+    // The cart is already saved under this user's ID and will be restored on login.
     setCart([]);
     setActiveTab("shop");
     setActionError(null);
   };
 
+  // The API recalculates prices and totals from MySQL before saving the order.
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const errors: Partial<Record<keyof CheckoutForm | "cartItems", string>> = {};
@@ -205,6 +275,7 @@ function App() {
         },
         authConfig,
       );
+      // Clear the local cart only after the server confirms the order was saved.
       setCart([]);
       setCheckoutData({ address: "", payment_method: "Credit Card" });
       refreshOrders();
@@ -235,6 +306,7 @@ function App() {
     }
   };
 
+  // Ask before the irreversible delete, then refresh the list after success.
   const handleDeleteOrder = async (orderId: number) => {
     if (!window.confirm("Are you sure you want to cancel and delete this order?")) return;
 
@@ -247,15 +319,8 @@ function App() {
     }
   };
 
-  const handleUpdateProfile = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const errors: Partial<Record<keyof ProfileForm, string>> = {};
-    if (profileData.name.trim().length < 2 || profileData.name.trim().length > 100) {
-      errors.name = "Name must be between 2 and 100 characters.";
-    }
-    setProfileErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
+  // The API returns a replacement JWT because the user's name is part of its claims.
+  const handleUpdateProfile = async (profileData: ProfileForm) => {
     setActionError(null);
     setIsSubmitting(true);
     try {
@@ -268,16 +333,18 @@ function App() {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       setToken(response.data.token);
       setUser(response.data.user);
+      profileForm.reset({ name: response.data.user.name });
     } catch (error: unknown) {
       const fields = getApiFieldErrors(error);
-      setProfileErrors({ name: fields.name });
-      if (!fields.name) setActionError(getApiErrorMessage(error, "Failed to update profile."));
+      if (fields.name) profileForm.setError("name", { message: fields.name });
+      else setActionError(getApiErrorMessage(error, "Failed to update profile."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (!token) {
+    // Guests see the sign-in / registration form until authentication succeeds.
     return (
       <div className="auth-wrapper">
         <div className="auth-card">
@@ -285,41 +352,41 @@ function App() {
             <h1>🛍 Shopee Clone</h1>
             <p>{isSignup ? "Create your new account" : "Log in to start shopping"}</p>
           </div>
-          <form onSubmit={handleAuthSubmit} className="auth-form" noValidate>
+          <form onSubmit={authForm.handleSubmit(handleAuthSubmit)} className="auth-form" noValidate>
             {isSignup && (
               <input
-                name="name"
-                aria-invalid={Boolean(authErrors.name)}
+                {...authForm.register("name")}
+                aria-invalid={Boolean(authForm.formState.errors.name)}
                 className="auth-input"
                 placeholder="Full Name"
-                value={authData.name}
-                onChange={handleAuthChange}
                 required
               />
             )}
-            {isSignup && authErrors.name && <small className="field-error">{authErrors.name}</small>}
+            {isSignup && authForm.formState.errors.name && (
+              <small className="field-error">{authForm.formState.errors.name.message}</small>
+            )}
             <input
-              name="email"
+              {...authForm.register("email")}
               type="email"
-              aria-invalid={Boolean(authErrors.email)}
+              aria-invalid={Boolean(authForm.formState.errors.email)}
               className="auth-input"
               placeholder="Email Address"
-              value={authData.email}
-              onChange={handleAuthChange}
               required
             />
-            {authErrors.email && <small className="field-error">{authErrors.email}</small>}
+            {authForm.formState.errors.email && (
+              <small className="field-error">{authForm.formState.errors.email.message}</small>
+            )}
             <input
-              name="password"
+              {...authForm.register("password")}
               type="password"
-              aria-invalid={Boolean(authErrors.password)}
+              aria-invalid={Boolean(authForm.formState.errors.password)}
               className="auth-input"
               placeholder="Password"
-              value={authData.password}
-              onChange={handleAuthChange}
               required
             />
-            {authErrors.password && <small className="field-error">{authErrors.password}</small>}
+            {authForm.formState.errors.password && (
+              <small className="field-error">{authForm.formState.errors.password.message}</small>
+            )}
             {actionError && <p className="status-message error-message" role="alert">{actionError}</p>}
             <button type="submit" className="auth-button" disabled={isSubmitting}>
               {isSubmitting ? "Please wait..." : isSignup ? "Sign Up" : "Log In"}
@@ -329,7 +396,7 @@ function App() {
             <button
               onClick={() => {
                 setIsSignup((previous) => !previous);
-                setAuthErrors({});
+                authForm.clearErrors();
                 setActionError(null);
               }}
               className="auth-toggle-btn"
@@ -381,12 +448,55 @@ function App() {
       <main className="main-container">
         {actionError && <p className="status-message error-message" role="alert">{actionError}</p>}
 
+        {/* Product catalog loaded by the shared API data hook. */}
         {activeTab === "shop" && (
           <>
+            <form className="product-filters" onSubmit={handleProductSearch}>
+              <label>
+                <span>Search products</span>
+                <input
+                  type="search"
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.currentTarget.value)}
+                  placeholder="Name or description"
+                  maxLength={100}
+                />
+              </label>
+              <label>
+                <span>Minimum price</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={minProductPrice}
+                  onChange={(event) => setMinProductPrice(event.currentTarget.value)}
+                  placeholder="$0.00"
+                />
+              </label>
+              <label>
+                <span>Maximum price</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={maxProductPrice}
+                  onChange={(event) => setMaxProductPrice(event.currentTarget.value)}
+                  placeholder="No limit"
+                />
+              </label>
+              <button type="submit" className="btn-submit">Search / Filter</button>
+              <button type="button" className="btn-filter-clear" onClick={clearProductFilters}>
+                Clear
+              </button>
+            </form>
             {productsLoading && <p className="status-message" role="status">Loading products...</p>}
             {productsError && <p className="status-message error-message" role="alert">{productsError}</p>}
             {!productsLoading && !productsError && products.length === 0 && (
-              <p className="status-message">No products are available right now.</p>
+              <p className="status-message">
+                {appliedProductFilters.search || appliedProductFilters.minPrice || appliedProductFilters.maxPrice
+                  ? "No products match your search or price range."
+                  : "No products are available right now."}
+              </p>
             )}
             <div className="product-grid">
               {products.map((product) => (
@@ -410,6 +520,7 @@ function App() {
           </>
         )}
 
+        {/* Cart controls and checkout form. */}
         {activeTab === "cart" && (
           <div>
             {cart.length === 0 ? (
@@ -497,6 +608,7 @@ function App() {
           </div>
         )}
 
+        {/* Orders are scoped to the signed-in user by the server. */}
         {activeTab === "orders" && (
           <div className="orders-card">
             <h3 className="card-title">Order History</h3>
@@ -553,10 +665,15 @@ function App() {
           </div>
         )}
 
+        {/* Profile updates return a new token containing the updated display name. */}
         {activeTab === "profile" && (
           <div className="profile-card" style={{ maxWidth: "500px", margin: "0 auto" }}>
             <h3 className="card-title">Account Settings</h3>
-            <form onSubmit={handleUpdateProfile} className="checkout-form" noValidate>
+            <form
+              onSubmit={profileForm.handleSubmit(handleUpdateProfile)}
+              className="checkout-form"
+              noValidate
+            >
               <div>
                 <label className="form-label" htmlFor="profile-email">Email Address (Read-only)</label>
                 <input
@@ -572,15 +689,15 @@ function App() {
                 <label className="form-label" htmlFor="profile-name">Full Name</label>
                 <input
                   id="profile-name"
-                  name="name"
+                  {...profileForm.register("name")}
                   type="text"
-                  aria-invalid={Boolean(profileErrors.name)}
-                  value={profileData.name}
-                  onChange={handleProfileChange}
+                  aria-invalid={Boolean(profileForm.formState.errors.name)}
                   className="form-input"
                   required
                 />
-                {profileErrors.name && <small className="field-error">{profileErrors.name}</small>}
+                {profileForm.formState.errors.name && (
+                  <small className="field-error">{profileForm.formState.errors.name.message}</small>
+                )}
               </div>
               <button type="submit" className="btn-submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Profile Changes"}

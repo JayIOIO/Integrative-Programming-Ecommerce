@@ -144,6 +144,7 @@ body {
   background: #ffffff;
 }
 
+/* Shared feedback styles for API and per-field validation errors. */
 .error-message {
   color: #9b1c1c;
   background: #fff0ef;
@@ -199,6 +200,42 @@ body {
 }
 
 /* Product Catalog */
+.product-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.product-filters label {
+  display: grid;
+  flex: 1 1 150px;
+  gap: 5px;
+  color: #555555;
+  font-size: 12px;
+}
+
+.product-filters input {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  color: #333333;
+}
+
+.btn-filter-clear {
+  padding: 9px 14px;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #444444;
+  cursor: pointer;
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

@@ -1,6 +1,6 @@
 # Million Dollar App
 
-A full-stack e-commerce checkout application built for the Full-Stack Form Application project. Customers can register or log in, browse a MySQL-backed product catalog, manage a cart, place an order, and review or update their order history.
+A full-stack e-commerce checkout application built for the Full-Stack Form Application project. Customers can register or log in, browse a MySQL-backed product catalog, manage a cart that is saved per account in the browser, place an order, and review or update their order history.
 
 ## Tech stack
 
@@ -15,6 +15,10 @@ A full-stack e-commerce checkout application built for the Full-Stack Form Appli
 client/     React + TypeScript application
 server/     Express API, MySQL schema, and environment example
 ```
+
+## Learning the codebase
+
+If you are new to React, TypeScript, APIs, Express, or MySQL, follow the staged [learning guide](./docs/LEARNING_GUIDE.md). It explains the app's architecture, traces its main flows, and includes practice exercises.
 
 ## Requirements
 
@@ -54,7 +58,7 @@ All order routes require `Authorization: Bearer <token>`. Order records are rest
 | POST | `/api/auth/signup` | Create account and issue JWT | 201, 400 |
 | POST | `/api/auth/login` | Authenticate and issue JWT | 200, 400 |
 | PUT | `/api/auth/profile` | Update the signed-in user's name | 200, 400, 404 |
-| GET | `/api/products` | List catalog products | 200, 500 |
+| GET | `/api/products` | List products; optional `search`, `minPrice`, and `maxPrice` query parameters | 200, 400, 500 |
 | POST | `/api/products` | Create a product (authenticated) | 201, 400, 500 |
 | POST | `/api/orders` | Create an order and decrement stock transactionally | 201, 400, 500 |
 | GET | `/api/orders` | List the signed-in user's orders | 200, 500 |
@@ -63,6 +67,8 @@ All order routes require `Authorization: Bearer <token>`. Order records are rest
 | DELETE | `/api/orders/:id` | Delete an order | 200, 400, 404 |
 
 All database operations use parameter placeholders. Checkout totals and item prices are calculated from current database product prices; client-supplied prices and totals are not trusted. Invalid form input returns `400` with an explanatory error and, when applicable, field errors.
+
+The catalog supports searching product names and descriptions and filtering by price. For example, `/api/products?search=headphones&minPrice=20&maxPrice=100` returns matching products within the requested price range. Search text is limited to 100 characters; prices must be non-negative numbers, with the minimum no greater than the maximum.
 
 ## Screenshots
 
@@ -88,6 +94,8 @@ These UI captures use sample data from a temporary demo API; they do not create 
 
 - Order status updates (`PUT /api/orders/:id`, +3 rubric points).
 - JWT authentication and protected API routes (+4 points if JWT was covered in class).
+- Product search and price filtering through API query strings (+2 rubric points).
+- React Hook Form and Zod validation for login, signup, and profile updates.
 
 ## Known issues and setup requirements
 

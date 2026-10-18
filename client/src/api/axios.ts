@@ -1,5 +1,6 @@
 import axios from "axios";
 
+// Centralize the API base URL so components only use endpoint paths.
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
 });
@@ -12,6 +13,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+// Keep field-level API validation errors separate from general request failures.
 export function getApiFieldErrors(error: unknown): Record<string, string> {
   if (!axios.isAxiosError<{ fields?: Record<string, unknown> }>(error)) return {};
 

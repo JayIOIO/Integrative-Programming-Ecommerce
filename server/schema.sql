@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Checkout Orders Table (Stores General Order Info Linked to Users)
+-- Orders belong to a user; deleting a user removes their associated orders.
 CREATE TABLE IF NOT EXISTS checkout_orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS checkout_orders (
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 5. Order Items Table (Links Specific Purchased Products to an Order)
+-- Each row records a purchased product and its price at the time of the order.
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
