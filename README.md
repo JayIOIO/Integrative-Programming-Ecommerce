@@ -272,7 +272,7 @@ Phone numbers are stored independently in `checkout_orders.phone`, not appended 
 
 | Name | Role | GitHub |
 | --- | --- | --- |
-| Your Name | e.g. Full-stack developer | [@JayIOIO](https://github.com/JayIOIO) |
+| Mhersan John Salenga | Full-stack developer | [@JayIOIO](https://github.com/JayIOIO) |
 
 ## License
 
