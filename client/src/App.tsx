@@ -352,7 +352,12 @@ function App() {
             <h1>🛍 Shopee Clone</h1>
             <p>{isSignup ? "Create your new account" : "Log in to start shopping"}</p>
           </div>
-          <form onSubmit={authForm.handleSubmit(handleAuthSubmit)} className="auth-form" noValidate>
+          <form
+            onSubmit={authForm.handleSubmit(handleAuthSubmit)}
+            onChange={() => setActionError(null)}
+            className="auth-form"
+            noValidate
+          >
             {isSignup && (
               <input
                 {...authForm.register("name")}
