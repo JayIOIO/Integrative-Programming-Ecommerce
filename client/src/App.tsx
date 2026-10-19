@@ -100,6 +100,7 @@ function App() {
     user ? readStoredCart(user.id) : [],
   );
   const [checkoutData, setCheckoutData] = useState<CheckoutForm>({
+    customerName: user?.name ?? "",
     address: "",
     city: "",
     province: "",
@@ -119,10 +120,18 @@ function App() {
   });
   // Keep request, validation, and pending-submit feedback separate for each view.
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   const [checkoutErrors, setCheckoutErrors] = useState<
     Partial<Record<keyof CheckoutForm | "cartItems", string>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!confirmationMessage) return;
+
+    const timeoutId = window.setTimeout(() => setConfirmationMessage(null), 2800);
+    return () => window.clearTimeout(timeoutId);
+  }, [confirmationMessage]);
 
   // Keep the catalog and signed-in user's orders synchronized with the API.
   const productQuery = new URLSearchParams();
@@ -200,6 +209,7 @@ function App() {
           )
         : [...previous, { ...product, quantity: 1 }];
     });
+    setConfirmationMessage(`${product.name} added to your cart.`);
   };
 
   const removeFromCart = (productId: number) => {
@@ -230,6 +240,7 @@ function App() {
       setToken(response.data.token);
       setUser(response.data.user);
       setCart(readStoredCart(response.data.user.id));
+      setCheckoutData((previous) => ({ ...previous, customerName: response.data.user.name }));
       profileForm.reset({ name: response.data.user.name });
       authForm.reset();
     } catch (error: unknown) {
@@ -265,7 +276,8 @@ function App() {
       for (const issue of validation.error.issues) {
         const field = issue.path[0];
         if (
-          (field === "address" ||
+          (field === "customerName" ||
+            field === "address" ||
             field === "city" ||
             field === "province" ||
             field === "postalCode" ||
@@ -294,6 +306,7 @@ function App() {
       await api.post(
         "/orders",
         {
+          customer_name: shippingDetails.customerName,
           address: shippingAddress,
           phone: shippingDetails.phone,
           payment_method: shippingDetails.payment_method,
@@ -305,6 +318,7 @@ function App() {
       // Clear the local cart only after the server confirms the order was saved.
       setCart([]);
       setCheckoutData({
+        customerName: user?.name ?? "",
         address: "",
         city: "",
         province: "",
@@ -315,9 +329,11 @@ function App() {
       refreshOrders();
       refreshProducts();
       setActiveTab("orders");
+      setConfirmationMessage("Order placed successfully!");
     } catch (error: unknown) {
       const fields = getApiFieldErrors(error);
       setCheckoutErrors({
+        customerName: fields.customer_name,
         address: fields.address,
         phone: fields.phone,
         payment_method: fields.payment_method,
@@ -368,6 +384,7 @@ function App() {
       localStorage.setItem("user", JSON.stringify(response.data.user));
       setToken(response.data.token);
       setUser(response.data.user);
+      setCheckoutData((previous) => ({ ...previous, customerName: response.data.user.name }));
       profileForm.reset({ name: response.data.user.name });
     } catch (error: unknown) {
       const fields = getApiFieldErrors(error);
@@ -484,6 +501,13 @@ function App() {
           ))}
         </div>
       </nav>
+
+      {confirmationMessage && (
+        <div className="confirmation-toast" role="status" aria-live="polite">
+          <span className="confirmation-toast-icon" aria-hidden="true">✓</span>
+          {confirmationMessage}
+        </div>
+      )}
 
       <main className="main-container">
         {actionError && <p className="status-message error-message" role="alert">{actionError}</p>}
@@ -606,6 +630,22 @@ function App() {
                   <form onSubmit={handleCheckoutSubmit} className="checkout-form" noValidate>
                     <h4>Shipping details</h4>
                     <p className="checkout-hint">Delivery addresses must be in the Philippines.</p>
+                    <label className="form-label" htmlFor="checkout-customer-name">CUSTOMER NAME</label>
+                    <input
+                      id="checkout-customer-name"
+                      name="customerName"
+                      type="text"
+                      aria-invalid={Boolean(checkoutErrors.customerName)}
+                      className="form-input"
+                      autoComplete="name"
+                      value={checkoutData.customerName}
+                      onChange={handleCheckoutChange}
+                      required
+                    />
+                    {checkoutErrors.customerName && (
+                      <small className="field-error">{checkoutErrors.customerName}</small>
+                    )}
+
                     <label className="form-label" htmlFor="shipping-address">STREET ADDRESS</label>
                     <input
                       id="shipping-address"
@@ -735,6 +775,7 @@ function App() {
                 <div key={order.id} className="order-item-card">
                   <div>
                     <h4 style={{ margin: "0 0 5px 0" }}>Order #{order.id}</h4>
+                    <p style={{ fontSize: "13px", color: "#555" }}>Customer: {order.customer_name}</p>
                     <p style={{ fontSize: "13px", color: "#555" }}>Address: {order.address}</p>
                     {order.phone && (
                       <p style={{ fontSize: "13px", color: "#555" }}>Phone: {order.phone}</p>

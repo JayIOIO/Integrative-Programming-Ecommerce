@@ -22,6 +22,11 @@ export const profileSchema = z.object({
 });
 
 export const checkoutSchema = z.object({
+  customerName: z
+    .string()
+    .trim()
+    .min(2, "Enter a customer name with at least 2 characters.")
+    .max(100, "Customer name must be 100 characters or fewer."),
   address: z
     .string()
     .trim()

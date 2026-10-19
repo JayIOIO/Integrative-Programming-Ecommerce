@@ -144,6 +144,59 @@ body {
   background: #ffffff;
 }
 
+.confirmation-toast {
+  position: fixed;
+  z-index: 1000;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: min(300px, calc(100vw - 2rem));
+  padding: 0.7rem 1rem;
+  border-left: 4px solid #ee4d2d;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: #333333;
+  font-size: 13px;
+  animation: toast-enter 200ms ease-out;
+}
+
+.confirmation-toast-icon {
+  display: inline-grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ee4d2d;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* Shared feedback styles for API and per-field validation errors. */
 .error-message {
   color: #9b1c1c;

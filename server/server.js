@@ -250,12 +250,16 @@ async function createProductHandler(req, res) {
 // Validate checkout input and create the order and stock changes as one transaction.
 async function createOrderHandler(req, res) {
   const body = isRecord(req.body) ? req.body : {};
+  const customerName = typeof body.customer_name === 'string' ? body.customer_name.trim() : '';
   const address = typeof body.address === 'string' ? body.address.trim() : '';
   const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
   const paymentMethod = body.payment_method;
   const cartItems = body.cartItems;
   const fields = {};
 
+  if (customerName.length < 2 || customerName.length > 100) {
+    fields.customer_name = 'Customer name must be between 2 and 100 characters.';
+  }
   if (address.length < 5 || address.length > 1000) {
     fields.address = 'Shipping address must be between 5 and 1000 characters.';
   }
@@ -330,7 +334,7 @@ async function createOrderHandler(req, res) {
 
     const [orderResult] = await connection.execute(
       'INSERT INTO checkout_orders (customer_name, email, address, phone, payment_method, total_amount, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.user.name, req.user.email, address, phone, paymentMethod, totalAmount.toFixed(2), req.user.id],
+      [customerName, req.user.email, address, phone, paymentMethod, totalAmount.toFixed(2), req.user.id],
     );
     const orderId = orderResult.insertId;
 
