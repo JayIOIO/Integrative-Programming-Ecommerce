@@ -251,12 +251,21 @@ async function createProductHandler(req, res) {
 async function createOrderHandler(req, res) {
   const body = isRecord(req.body) ? req.body : {};
   const address = typeof body.address === 'string' ? body.address.trim() : '';
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
   const paymentMethod = body.payment_method;
   const cartItems = body.cartItems;
   const fields = {};
 
   if (address.length < 5 || address.length > 1000) {
     fields.address = 'Shipping address must be between 5 and 1000 characters.';
+  }
+  const phoneDigits = phone.replace(/\D/g, '').length;
+  if (
+    !/^\+?[0-9][0-9\s().-]*$/.test(phone) ||
+    phoneDigits < 7 ||
+    phoneDigits > 15
+  ) {
+    fields.phone = 'Enter a valid phone number containing 7 to 15 digits.';
   }
   if (typeof paymentMethod !== 'string' || !paymentMethods.has(paymentMethod)) {
     fields.payment_method = 'Choose a supported payment method.';
@@ -320,8 +329,8 @@ async function createOrderHandler(req, res) {
     }
 
     const [orderResult] = await connection.execute(
-      'INSERT INTO checkout_orders (customer_name, email, address, payment_method, total_amount, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.user.name, req.user.email, address, paymentMethod, totalAmount.toFixed(2), req.user.id],
+      'INSERT INTO checkout_orders (customer_name, email, address, phone, payment_method, total_amount, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.user.name, req.user.email, address, phone, paymentMethod, totalAmount.toFixed(2), req.user.id],
     );
     const orderId = orderResult.insertId;
 

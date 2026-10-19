@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { api, getApiErrorMessage, getApiFieldErrors } from "./api/axios";
 import { useApiData } from "./hooks/useApiData";
-import { createAuthSchema, profileSchema } from "./validation/schemas";
+import { checkoutSchema, createAuthSchema, profileSchema } from "./validation/schemas";
 import type {
   AuthForm,
   CartItem,
@@ -101,6 +101,10 @@ function App() {
   );
   const [checkoutData, setCheckoutData] = useState<CheckoutForm>({
     address: "",
+    city: "",
+    province: "",
+    postalCode: "",
+    phone: "",
     payment_method: "Credit Card",
   });
   const authForm = useForm<AuthForm>({
@@ -158,11 +162,15 @@ function App() {
   const authConfig = { headers: { Authorization: `Bearer ${token}` } };
 
   const handleCheckoutChange = (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>,
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.currentTarget;
     setCheckoutData((previous) => ({ ...previous, [name]: value }));
-    setCheckoutErrors((previous) => ({ ...previous, [name]: undefined }));
+    setCheckoutErrors((previous) => ({
+      ...previous,
+      [name]: undefined,
+      address: name === "address" ? undefined : previous.address,
+    }));
     setActionError(null);
   };
 
@@ -252,24 +260,43 @@ function App() {
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const errors: Partial<Record<keyof CheckoutForm | "cartItems", string>> = {};
-    if (checkoutData.address.trim().length < 5) {
-      errors.address = "Enter a shipping address with at least 5 characters.";
-    }
-    if (!["Credit Card", "PayPal", "Cash on Delivery"].includes(checkoutData.payment_method)) {
-      errors.payment_method = "Choose a valid payment method.";
+    const validation = checkoutSchema.safeParse(checkoutData);
+    if (!validation.success) {
+      for (const issue of validation.error.issues) {
+        const field = issue.path[0];
+        if (
+          (field === "address" ||
+            field === "city" ||
+            field === "province" ||
+            field === "postalCode" ||
+            field === "phone" ||
+            field === "payment_method") &&
+          !errors[field]
+        ) {
+          errors[field] = issue.message;
+        }
+      }
     }
     if (cart.length === 0) errors.cartItems = "Add at least one item before checkout.";
     setCheckoutErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (!validation.success || Object.keys(errors).length > 0) return;
 
+    const shippingDetails = validation.data;
+    const shippingAddress = [
+      shippingDetails.address,
+      shippingDetails.city,
+      shippingDetails.province,
+      shippingDetails.postalCode,
+    ].join(", ");
     setActionError(null);
     setIsSubmitting(true);
     try {
       await api.post(
         "/orders",
         {
-          address: checkoutData.address,
-          payment_method: checkoutData.payment_method,
+          address: shippingAddress,
+          phone: shippingDetails.phone,
+          payment_method: shippingDetails.payment_method,
           total_amount: cartTotal.toFixed(2),
           cartItems: cart,
         },
@@ -277,7 +304,14 @@ function App() {
       );
       // Clear the local cart only after the server confirms the order was saved.
       setCart([]);
-      setCheckoutData({ address: "", payment_method: "Credit Card" });
+      setCheckoutData({
+        address: "",
+        city: "",
+        province: "",
+        postalCode: "",
+        phone: "",
+        payment_method: "Credit Card",
+      });
       refreshOrders();
       refreshProducts();
       setActiveTab("orders");
@@ -285,6 +319,7 @@ function App() {
       const fields = getApiFieldErrors(error);
       setCheckoutErrors({
         address: fields.address,
+        phone: fields.phone,
         payment_method: fields.payment_method,
         cartItems: fields.cartItems,
       });
@@ -569,14 +604,16 @@ function App() {
                     <span style={{ color: "#ee4d2d" }}>${cartTotal.toFixed(2)}</span>
                   </div>
                   <form onSubmit={handleCheckoutSubmit} className="checkout-form" noValidate>
-                    <label className="form-label" htmlFor="shipping-address">SHIPPING ADDRESS</label>
-                    <textarea
+                    <h4>Shipping details</h4>
+                    <p className="checkout-hint">Delivery addresses must be in the Philippines.</p>
+                    <label className="form-label" htmlFor="shipping-address">STREET ADDRESS</label>
+                    <input
                       id="shipping-address"
                       name="address"
                       aria-invalid={Boolean(checkoutErrors.address)}
-                      rows={3}
-                      className="form-textarea"
-                      placeholder="Street, City, Zip Code..."
+                      className="form-input"
+                      autoComplete="street-address"
+                      placeholder="123 Mabini St. or Block 2 Lot 5, Sampaguita"
                       value={checkoutData.address}
                       onChange={handleCheckoutChange}
                       required
@@ -584,6 +621,77 @@ function App() {
                     {checkoutErrors.address && (
                       <small className="field-error">{checkoutErrors.address}</small>
                     )}
+
+                    <label className="form-label" htmlFor="shipping-city">CITY</label>
+                    <input
+                      id="shipping-city"
+                      name="city"
+                      type="text"
+                      aria-invalid={Boolean(checkoutErrors.city)}
+                      className="form-input"
+                      autoComplete="address-level2"
+                      placeholder="Quezon City"
+                      value={checkoutData.city}
+                      onChange={handleCheckoutChange}
+                      required
+                    />
+                    {checkoutErrors.city && (
+                      <small className="field-error">{checkoutErrors.city}</small>
+                    )}
+
+                    <label className="form-label" htmlFor="shipping-province">PROVINCE / REGION</label>
+                    <input
+                      id="shipping-province"
+                      name="province"
+                      type="text"
+                      aria-invalid={Boolean(checkoutErrors.province)}
+                      className="form-input"
+                      autoComplete="address-level1"
+                      placeholder="Cebu or Metro Manila"
+                      value={checkoutData.province}
+                      onChange={handleCheckoutChange}
+                      required
+                    />
+                    {checkoutErrors.province && (
+                      <small className="field-error">{checkoutErrors.province}</small>
+                    )}
+
+                    <label className="form-label" htmlFor="shipping-postal-code">POSTAL CODE</label>
+                    <input
+                      id="shipping-postal-code"
+                      name="postalCode"
+                      type="text"
+                      aria-invalid={Boolean(checkoutErrors.postalCode)}
+                      className="form-input"
+                      autoComplete="postal-code"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="6000"
+                      value={checkoutData.postalCode}
+                      onChange={handleCheckoutChange}
+                      required
+                    />
+                    {checkoutErrors.postalCode && (
+                      <small className="field-error">{checkoutErrors.postalCode}</small>
+                    )}
+
+                    <label className="form-label" htmlFor="shipping-phone">PHONE NUMBER</label>
+                    <input
+                      id="shipping-phone"
+                      name="phone"
+                      type="tel"
+                      aria-invalid={Boolean(checkoutErrors.phone)}
+                      className="form-input"
+                      autoComplete="tel"
+                      placeholder="+1 415 555 0132 or 0917 123 4567"
+                      value={checkoutData.phone}
+                      onChange={handleCheckoutChange}
+                      required
+                    />
+                    {checkoutErrors.phone && (
+                      <small className="field-error">{checkoutErrors.phone}</small>
+                    )}
+
                     <label className="form-label" htmlFor="payment-method">PAYMENT METHOD</label>
                     <select
                       id="payment-method"
@@ -628,6 +736,9 @@ function App() {
                   <div>
                     <h4 style={{ margin: "0 0 5px 0" }}>Order #{order.id}</h4>
                     <p style={{ fontSize: "13px", color: "#555" }}>Address: {order.address}</p>
+                    {order.phone && (
+                      <p style={{ fontSize: "13px", color: "#555" }}>Phone: {order.phone}</p>
+                    )}
                     <p style={{ fontSize: "13px", color: "#555" }}>Payment: {order.payment_method}</p>
                     <strong style={{ color: "#ee4d2d", fontSize: "16px" }}>
                       Total: ${Number(order.total_amount).toFixed(2)}

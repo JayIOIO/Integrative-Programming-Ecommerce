@@ -21,6 +21,7 @@ export interface CartItem extends Product {
 export interface Order {
   id: number;
   address: string;
+  phone: string | null;
   payment_method: string;
   total_amount: number | string;
   status: string;
@@ -35,6 +36,10 @@ export interface AuthForm {
 
 export interface CheckoutForm {
   address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string;
   payment_method: string;
 }
 

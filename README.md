@@ -70,6 +70,8 @@ All database operations use parameter placeholders. Checkout totals and item pri
 
 The catalog supports searching product names and descriptions and filtering by price. For example, `/api/products?search=headphones&minPrice=20&maxPrice=100` returns matching products within the requested price range. Search text is limited to 100 characters; prices must be non-negative numbers, with the minimum no greater than the maximum.
 
+Checkout validates Philippine shipping addresses in the client: a numbered street/lot address, city or municipality, province or region, and four-digit ZIP code. Phone validation is country-independent: it accepts an optional leading `+`, standard separators, and 7–15 digits. Phone numbers are stored independently in `checkout_orders.phone`, not appended to the address. For an existing database, run [the order phone migration](./server/migrations/20261019_add_order_phone.sql) before using the updated checkout API. These format checks cannot confirm that an address or phone number exists or is serviceable.
+
 ## Screenshots
 
 These UI captures use sample data from a temporary demo API; they do not create or alter MySQL records.

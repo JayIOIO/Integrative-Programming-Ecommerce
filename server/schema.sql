@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS checkout_orders (
   customer_name VARCHAR(100) NOT NULL,
   email VARCHAR(100) NOT NULL,
   address TEXT NOT NULL,
+  phone VARCHAR(30) NOT NULL,
   payment_method VARCHAR(50) NOT NULL,
   total_amount DECIMAL(10, 2) NOT NULL,
   status VARCHAR(50) DEFAULT 'Pending',

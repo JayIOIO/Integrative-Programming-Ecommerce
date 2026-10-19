@@ -230,7 +230,7 @@ checkout_orders 1 ----- many order_items
 products 1 ----- many order_items
 ```
 
-`checkout_orders` stores order-level details such as address and total. `order_items` stores each product and quantity for an order, including the price at purchase time. A foreign key connects those rows. Product price can change later; the order item price represents what the customer was charged at checkout.
+`checkout_orders` stores order-level details such as address, phone, and total. `order_items` stores each product and quantity for an order, including the price at purchase time. A foreign key connects those rows. Product price can change later; the order item price represents what the customer was charged at checkout.
 
 For example, this pattern separates query text from user-provided values:
 
@@ -310,7 +310,7 @@ Practice: add items, refresh, log out, log in again, then inspect browser Applic
 
 ### Checkout and database transaction
 
-1. The client validates address, payment method, and that the cart is not empty.
+1. The client validates street address, city, state/province, postal code, phone number, payment method, and that the cart is not empty. `checkoutSchema` in `client/src/validation/schemas.ts` defines the field rules; the controlled checkout state remains in `App.tsx`.
 2. It sends product IDs and quantities to `POST /api/orders`.
 3. The server validates all values again and checks the token.
 4. The server opens a MySQL transaction and locks each product row while checking stock and price.
@@ -318,7 +318,7 @@ Practice: add items, refresh, log out, log in again, then inspect browser Applic
 6. If something fails, it rolls back so a partial order/stock update is not left behind.
 7. On success the browser clears the cart and refreshes orders and products.
 
-The total shown in the browser is useful for display, but it is not trusted for the saved order total. A user can change browser data; the server is the authority.
+The street, city, province, and postal code are combined into the `address` value, while phone is sent and stored in its own `checkout_orders.phone` column. Existing databases need the migration in `server/migrations/20261019_add_order_phone.sql`. The total shown in the browser is useful for display, but it is not trusted for the saved order total. A user can change browser data; the server is the authority.
 
 Read the client handler in [App.tsx](../client/src/App.tsx#L252) and the server handler in [server.js](../server/server.js#L251).
 
