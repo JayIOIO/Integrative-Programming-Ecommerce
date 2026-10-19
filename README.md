@@ -39,8 +39,6 @@ client/     React + TypeScript application
 server/     Express API, MySQL schema, and environment example
 ```
 
-> **New to the stack?** Follow the staged [learning guide](./docs/LEARNING_GUIDE.md). It explains the app's architecture, traces its main flows, and includes practice exercises.
-
 ## ✅ Requirements checklist
 
 - [x] Registration and login with validation
