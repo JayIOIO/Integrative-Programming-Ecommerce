@@ -22,32 +22,85 @@ If you are new to React, TypeScript, APIs, Express, or MySQL, follow the staged 
 
 ## Requirements
 
-- Node.js 20.19+ (required by the current Vite release)
-- MySQL 8 or compatible
+- Node.js 20.19 or newer and npm (required by the current Vite release)
+- MySQL 8 or a compatible MySQL server
+- A MySQL account that can create/use the `ecommerce_db` database
+- Git, if you are cloning the repository
 
 ## Setup
 
-1. Install root and app dependencies:
+### 1. Get the project and install dependencies
 
-   ```sh
-   npm install
-   npm install --prefix server
-   npm install --prefix client
-   ```
+If you have not already downloaded the project, clone it and move into the project folder:
 
-2. Create the database and sample products by running [server/schema.sql](./server/schema.sql) in MySQL.
+```sh
+git clone https://github.com/JayIOIO/Integrative-Programming-Ecommerce.git
+cd Integrative-Programming-Ecommerce
+```
 
-3. Copy `server/.env.example` to `server/.env` and set the database credentials and a long, random `JWT_SECRET`. Copy `client/.env.example` to `client/.env` if the API URL differs from its default. `.env` files are ignored by Git.
+Install the root, server, and client dependencies from the project root:
 
-4. Start both services from the project root:
+```sh
+npm install
+npm install --prefix server
+npm install --prefix client
+```
 
-   ```sh
-   npm run dev
-   ```
+### 2. Create the database
 
-   Or start them separately with `npm run dev --prefix server` and `npm run dev --prefix client`.
+Start MySQL, then open `server/schema.sql` in MySQL Workbench (or XAMPP PHPMyAdmin) and execute the whole file. It creates `ecommerce_db`, the application tables, and sample products. See [server/schema.sql](./server/schema.sql).
 
-   The default client URL is http://localhost:5173 and the default API URL is http://localhost:5000.
+### 3. Configure environment files
+
+Copy the example files:
+
+```sh
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+On Windows PowerShell, use:
+
+```powershell
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.example client/.env
+```
+
+Edit `server/.env` and set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` to match your MySQL installation. Keep `PORT=5000` and `CORS_ORIGIN=http://localhost:5173` for the default local setup. Replace `JWT_SECRET` with a long, random secret; for example, generate one with:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Paste the generated value into `server/.env`. Do not put that value in the client environment file, source code, screenshots, or Git. The client `.env` can usually keep `VITE_API_URL=http://localhost:5000/api`; change it only if your API uses a different URL. Environment files are ignored by Git; only the example templates should be shared.
+
+### 4. Start the application
+
+From the project root:
+
+```sh
+npm run dev
+```
+
+This starts the Express API and Vite client in the same terminal. Keep the terminal open. Open the client URL printed by Vite (normally `http://localhost:5173`); the API is normally at `http://localhost:5000`.
+
+You can also start each service in its own terminal from the project root:
+
+```sh
+npm run dev --prefix server
+npm run dev --prefix client
+```
+
+To confirm the API is reachable, open `http://localhost:5000/api/products`. It should return a JSON list. If the browser reports “Network Error,” check that both services are running, the client API URL points to the server, and the CORS origin matches the browser URL.
+
+### 5. Build and check the client
+
+From the project root:
+
+```sh
+npm run build --prefix client
+npm run lint --prefix client
+```
 
 ## API
 
@@ -92,12 +145,16 @@ These UI captures use sample data from a temporary demo API; they do not create 
 
 ![Order history](./client/docs/screenshots/order-history.png)
 
+### Account Management
+
+![Change name](./client/docs/screenshots/account-settings.png)
+
 ## Bonus features
 
 - Order status updates (`PUT /api/orders/:id`, +3 rubric points).
-- JWT authentication and protected API routes (+4 points if JWT was covered in class).
+- JWT authentication and protected API routes (+4 points).
 - Product search and price filtering through API query strings (+2 rubric points).
-- React Hook Form and Zod validation for login, signup, and profile updates.
+- React Hook Form and Zod validation for login, signup, checkout form and profile updates.
 
 ## Known issues and setup requirements
 
