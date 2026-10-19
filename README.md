@@ -1,6 +1,6 @@
 <div align="center">
 
-# Million Dollar App
+# Shopee Clone Check-Out Form
 
 **A full-stack e-commerce checkout app with JWT authentication, a MySQL-backed product catalog, and order management.**
 
