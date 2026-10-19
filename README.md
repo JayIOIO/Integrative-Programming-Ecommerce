@@ -1,6 +1,6 @@
 <div align="center">
 
-# Shopee Clone Check-Out Form
+# 🛒 Shopee Clone Check-Out Form
 
 **A full-stack e-commerce checkout app with JWT authentication, a MySQL-backed product catalog, and order management.**
 
@@ -13,7 +13,7 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A520.19-339933?logo=nodedotjs&logoColor=white)
 
-[Overview](#overview) · [Requirements Checklist](#-requirements-checklist) · [Quick Start](#-quick-start) · [API](#api) · [Validation](#how-validation-works) · [Troubleshooting](#troubleshooting)
+[Requirements](#-requirements-traceability) · [Quick start](#-quick-start) · [API](#api) · [Validation](#how-validation-works) · [Troubleshooting](#troubleshooting)
 
 <img src="./client/docs/screenshots/product-catalog.png" width="720" alt="Product catalog">
 
@@ -32,32 +32,39 @@ Customers can register or log in, browse a MySQL-backed product catalog, manage 
 | **Database** | MySQL with a `mysql2/promise` connection pool |
 | **Auth** | JWT + bcryptjs |
 | **Forms** | React Hook Form + Zod |
-| **Bonus** | Order status updates · JWT-protected routes · Search & price filtering |
 
 ```text
 client/     React + TypeScript application
 server/     Express API, MySQL schema, and environment example
 ```
 
-## ✅ Requirements checklist
+## ✅ Requirements traceability
 
-- [x] Registration and login with validation
-- [x] MySQL-backed product catalog
-- [x] Per-account cart saved in the browser
-- [x] Transactional checkout (stock is decremented inside a transaction)
-- [x] Order history: view, update status, and delete
-- [x] Account management (update display name)
-- [x] Server-side price calculation (client-supplied prices and totals are never trusted)
-- [x] Parameterized SQL queries throughout
+Every requirement below links to where a reviewer can verify it.
+
+### Core requirements
+
+| # | Requirement | Status | Where to verify |
+| :-: | --- | :-: | --- |
+| 1 | Registration and login with validation | ✅ | `POST /api/auth/signup`, `POST /api/auth/login` · [Sign-in screenshot](#screenshots) |
+| 2 | MySQL-backed product catalog | ✅ | [`server/schema.sql`](./server/schema.sql) · `GET /api/products` |
+| 3 | Per-account cart saved in the browser | ✅ | Client cart, keyed per signed-in account |
+| 4 | Transactional checkout (stock decremented inside a transaction) | ✅ | `POST /api/orders` · [Checkout screenshot](#screenshots) |
+| 5 | Order history: view, update status, delete | ✅ | `GET`, `PUT`, `DELETE /api/orders/:id` · [Order history screenshot](#screenshots) |
+| 6 | Account management (update display name) | ✅ | `PUT /api/auth/profile` · [Account screenshot](#screenshots) |
+| 7 | Server-side price calculation (client prices and totals never trusted) | ✅ | [Security and data integrity](#api) |
+| 8 | Parameterized SQL queries throughout | ✅ | [Security and data integrity](#api) |
 
 ### Bonus features
 
-| Feature | Where | Rubric points |
-| --- | --- | --- |
-| Order status updates | `PUT /api/orders/:id` | +3 |
-| JWT authentication and protected API routes | `/api/auth/*`, `/api/orders/*` | +4 |
-| Product search and price filtering | `GET /api/products?search=&minPrice=&maxPrice=` | +2 |
-| React Hook Form + Zod validation | Login, signup, checkout, profile forms | n/a |
+| Feature | Status | Where to verify | Rubric points |
+| --- | :-: | --- | :-: |
+| Order status updates | ✅ | `PUT /api/orders/:id` | +3 |
+| JWT authentication and protected API routes | ✅ | `/api/auth/*`, `/api/orders/*` | +4 |
+| Product search and price filtering | ✅ | `GET /api/products?search=&minPrice=&maxPrice=` | +2 |
+| React Hook Form + Zod validation | ✅ | Login, signup, checkout, and profile forms | n/a |
+
+**Bonus total: +9**
 
 ## Screenshots
 
@@ -268,14 +275,10 @@ Phone numbers are stored independently in `checkout_orders.phone`, not appended 
 
 ## Team
 
-<!-- Replace with your names, roles, and GitHub profiles -->
-
 | Name | Role | GitHub |
 | --- | --- | --- |
 | Mhersan John Salenga | Full-stack developer | [@JayIOIO](https://github.com/JayIOIO) |
 
 ## License
-
-<!-- Add a LICENSE file to the repo and name it here, e.g. "Released under the MIT License." -->
 
 *License to be added.*
