@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shopee Clone — 5-to-7 Minute Demo & Oral Defense Script</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 16mm 14mm 16mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #2d3748;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 11pt;
+    }
+    header {
+      border-bottom: 3px solid #ee4d2d;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+    .badge {
+      display: inline-block;
+      background: #ee4d2d;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 8.5pt;
+      padding: 3px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    h1 {
+      font-size: 19pt;
+      color: #1a202c;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      font-size: 10pt;
+      color: #718096;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 14px 0 18px 0;
+      background: #f7fafc;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      font-size: 9pt;
+    }
+    .meta-item strong {
+      display: block;
+      color: #4a5568;
+      font-size: 8pt;
+      text-transform: uppercase;
+    }
+    .agenda-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 22px;
+      font-size: 9.5pt;
+    }
+    .agenda-table th, .agenda-table td {
+      border: 1px solid #e2e8f0;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .agenda-table th {
+      background: #edf2f7;
+      color: #2d3748;
+      font-weight: 700;
+    }
+    .agenda-table tr:nth-child(even) {
+      background: #fbfcfe;
+    }
+
+    .section-card {
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #ee4d2d;
+      border-radius: 5px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #edf2f7;
+      padding-bottom: 6px;
+    }
+    .section-title {
+      font-size: 12pt;
+      font-weight: 800;
+      color: #1a202c;
+    }
+    .time-tag {
+      background: #fed7d7;
+      color: #9b2c2c;
+      font-weight: 700;
+      font-size: 8.5pt;
+      padding: 2px 7px;
+      border-radius: 12px;
+    }
+    .box {
+      margin: 6px 0;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 9.5pt;
+    }
+    .box-action {
+      background: #f7fafc;
+      border: 1px dashed #cbd5e0;
+      color: #2d3748;
+    }
+    .box-code {
+      background: #edf2f7;
+      border-left: 3px solid #4a5568;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      color: #1a202c;
+    }
+    .box-speech {
+      background: #fffaf0;
+      border-left: 3px solid #dd6b20;
+      color: #2d3748;
+      font-style: normal;
+    }
+    .box-speech strong {
+      color: #c05621;
+    }
+    .label {
+      font-weight: 700;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+      display: block;
+    }
+    .label-action { color: #4a5568; }
+    .label-code { color: #2d3748; }
+    .label-speech { color: #dd6b20; }
+
+    .qa-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 9pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .qa-table th, .qa-table td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .qa-table th {
+      background: #2d3748;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .qa-table td.q {
+      font-weight: 700;
+      color: #c53030;
+      width: 32%;
+    }
+    .qa-table td.a {
+      color: #2d3748;
+    }
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+    .tip-box {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-left: 4px solid #3182ce;
+      padding: 10px 12px;
+      border-radius: 4px;
+      margin-top: 14px;
+      font-size: 9pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="badge">Integrative Programming — Final Project Defense</span>
+    <h1>Shopee Clone: 5-to-7 Minute Demo Script</h1>
+    <div class="subtitle">Complete Presentation Guide &bull; UI Walkthrough, Code Explanations &amp; Oral Defense Defense Strategy</div>
+  </header>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <strong>Architecture</strong>
+      React 19 + Express 5 + MySQL
+    </div>
+    <div class="meta-item">
+      <strong>Target Duration</strong>
+      5 Minutes (Max 7 mins)
+    </div>
+    <div class="meta-item">
+      <strong>Security Stack</strong>
+      bcrypt + JWT + Parameterized SQL
+    </div>
+    <div class="meta-item">
+      <strong>Validation</strong>
+      Zod + React Hook Form
+    </div>
+  </div>
+
+  <table class="agenda-table">
+    <thead>
+      <tr>
+        <th style="width: 15%;">Time</th>
+        <th style="width: 35%;">Segment</th>
+        <th style="width: 50%;">Core Technical Highlight</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>0:00 – 1:00</strong></td>
+        <td>Introduction &amp; Architecture</td>
+        <td>3-tier architecture, connection pooling, client-server decoupling</td>
+      </tr>
+      <tr>
+        <td><strong>1:00 – 2:30</strong></td>
+        <td>Authentication &amp; Security</td>
+        <td>bcrypt password hashing (10 salt rounds), JWT token issuance &amp; claims</td>
+      </tr>
+      <tr>
+        <td><strong>2:30 – 3:45</strong></td>
+        <td>Catalog, Search &amp; Custom Hook</td>
+        <td>Reusable <code>useApiData</code> hook, cleanup flag, dynamic WHERE clause</td>
+      </tr>
+      <tr>
+        <td><strong>3:45 – 5:15</strong></td>
+        <td>Cart &amp; Transactional Checkout</td>
+        <td>ACID Transactions (<code>beginTransaction/commit</code>), <code>FOR UPDATE</code> locking, server prices</td>
+      </tr>
+      <tr>
+        <td><strong>5:15 – 6:15</strong></td>
+        <td>Order Management &amp; Data Privacy</td>
+        <td>Protected routes (<code>authenticateToken</code>), data ownership (<code>WHERE user_id = req.user.id</code>)</td>
+      </tr>
+      <tr>
+        <td><strong>6:15 – 7:00</strong></td>
+        <td>Conclusion &amp; Q&amp;A Defense</td>
+        <td>Summary of engineering decisions and invitation for professor queries</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SEGMENT 1 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">1. Introduction &amp; Tech Stack Overview</div>
+      <span class="time-tag">0:00 – 1:00</span>
+    </div>
+    <div class="box box-action">
+      <span class="label label-action">Screen Action</span>
+      Open browser at <code>http://localhost:5173</code> showing the Sign-In card. Have VS Code ready in the background with <code>server.js</code> and <code>App.tsx</code> open.
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script (Word-for-Word)</span>
+      "Good day, Professor! Today we are presenting our Integrative Programming final project: a full-stack <strong>Shopee Clone E-Commerce Application</strong> with user authentication, catalog management, and a transactional checkout system.<br><br>
+      Our system is built on a clean 3-tier architecture:
+      <ul>
+        <li><strong>Frontend:</strong> React 19 with TypeScript, styled with custom Shopee-inspired CSS and bundled with Vite.</li>
+        <li><strong>Backend:</strong> Node.js with Express 5, implementing a secure RESTful API.</li>
+        <li><strong>Database:</strong> MySQL relational database connected via connection pooling using <code>mysql2/promise</code>.</li>
+        <li><strong>Validation &amp; Security:</strong> Client-side Zod schemas with React Hook Form, paired with server-side bcrypt password hashing and stateless JSON Web Tokens.</li>
+      </ul>
+      Let us walk you through the system workflow and the code behind it."
+    </div>
+  </div>
+
+  <!-- SEGMENT 2 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">2. Authentication (Sign-Up, Login, bcrypt &amp; JWT)</div>
+      <span class="time-tag">1:00 – 2:30</span>
+    </div>
+    <div class="box box-action">
+      <span class="label label-action">Screen Action</span>
+      1. Click <em>"New to Shopee? Sign Up"</em>.<br>
+      2. Type an invalid email (e.g. <code>test</code>) or short password to show the red validation message.<br>
+      3. Type valid credentials and click <strong>"Sign Up"</strong> (or log in with an existing account). Show that it immediately logs in and displays the user's name in the header.
+    </div>
+    <div class="box box-code">
+      <span class="label label-code">Code Location in VS Code</span>
+      <code>server/server.js</code> lines 107–114 (signup handler) &amp; lines 138–151 (login handler)
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script</span>
+      "Starting with Authentication: notice when I type an invalid email or short password, our client-side <strong>Zod schema</strong> in <code>schemas.ts</code> catches it instantly on blur before any network request is sent.<br><br>
+      Behind the scenes in <code>server.js</code>:
+      <ol>
+        <li>When the user registers, we hash the password with <strong>bcrypt</strong> using 10 salt rounds (<code>bcrypt.hash</code>). Plain passwords are never stored in MySQL.</li>
+        <li>During login, <code>bcrypt.compare</code> verifies the entered password against the stored database hash.</li>
+        <li>Once verified, the server issues a <strong>JSON Web Token (JWT)</strong> signed with our secret key. It contains the user's ID, name, and email and expires in 24 hours.</li>
+        <li>The client stores this token in <code>localStorage</code>, attaching it to the <code>Authorization: Bearer</code> header on all protected API calls."</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SEGMENT 3 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">3. Product Catalog, Search &amp; Custom Reusable Hook</div>
+      <span class="time-tag">2:30 – 3:45</span>
+    </div>
+    <div class="box box-action">
+      <span class="label label-action">Screen Action</span>
+      1. On the <strong>"Mall Products"</strong> tab, type <em>"keyboard"</em> in search and click <strong>Search / Filter</strong>.<br>
+      2. Clear it, enter Min Price: <code>50</code>, Max Price: <code>150</code>, click Search. Show dynamic grid updates.<br>
+      3. Click <strong>Clear</strong> to restore the catalog.
+    </div>
+    <div class="box box-code">
+      <span class="label label-code">Code Location in VS Code</span>
+      <code>client/src/hooks/useApiData.ts</code> lines 12–57 &amp; <code>server/server.js</code> lines 192–215
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script</span>
+      "Here on the storefront, products are fetched dynamically from our MySQL <code>products</code> table.<br><br>
+      Instead of copy-pasting data fetching in multiple components, we built a reusable custom React hook called <code>useApiData</code>. It encapsulates:
+      <ul>
+        <li>The <code>data</code> array, <code>loading</code> state, and <code>error</code> state.</li>
+        <li>A <code>refresh()</code> callback to trigger data re-fetching without reloading the entire page.</li>
+        <li>And a cleanup flag (<code>isCurrent = false</code>) to discard stale responses if the user rapidly searches.</li>
+      </ul>
+      On the backend, <code>listProductsHandler</code> dynamically constructs the SQL <code>WHERE</code> clause using parameterized <code>?</code> placeholders, keeping the API fast and safe from SQL injection."
+    </div>
+  </div>
+
+  <!-- SEGMENT 4 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">4. Cart &amp; Transactional Checkout (The Main Star!)</div>
+      <span class="time-tag">3:45 – 5:15</span>
+    </div>
+    <div class="box box-action">
+      <span class="label label-action">Screen Action</span>
+      1. Click <strong>"+ Add"</strong> on two products. Point out the bottom-right confirmation toast.<br>
+      2. Switch to <strong>"My Cart"</strong> tab. Increase quantity on one item.<br>
+      3. Fill out the Philippine address form: <em>123 Mabini St.</em>, <em>Quezon City</em>, <em>Metro Manila</em>, <em>1100</em>, Phone: <em>09171234567</em>.<br>
+      4. Click <strong>"Place Order"</strong>. The cart clears, toast pops up, and it automatically switches to <strong>"My Orders"</strong>.
+    </div>
+    <div class="box box-code">
+      <span class="label label-code">Code Location in VS Code</span>
+      <code>server/server.js</code> lines 300–353 (<code>createOrderHandler</code> transaction)
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script</span>
+      "Now for the checkout process — this is the most critical part of our system architecture.<br><br>
+      Notice two important engineering decisions we made:
+      <ol>
+        <li><strong>Server-Side Price Validation:</strong> The server completely ignores prices sent by the browser. It recalculates the total directly from current database product records to prevent client-side price tampering.</li>
+        <li><strong>ACID MySQL Transactions with Concurrency Control:</strong> In <code>server.js</code>, you can see <code>connection.beginTransaction()</code>. For every item, we execute <code>SELECT ... FOR UPDATE</code>. This locks the database row so two concurrent buyers cannot buy the last available item simultaneously.</li>
+      </ol>
+      The server inserts the order header into <code>checkout_orders</code>, records item snapshots into <code>order_items</code>, and decrements stock in <code>products</code>. If any item is out of stock, it executes <code>rollback()</code>. If everything succeeds, it executes <code>commit()</code>. All or nothing."
+    </div>
+  </div>
+
+  <!-- SEGMENT 5 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">5. Order History &amp; Data Ownership</div>
+      <span class="time-tag">5:15 – 6:15</span>
+    </div>
+    <div class="box box-action">
+      <span class="label label-action">Screen Action</span>
+      1. Show the placed order at the top of <strong>"My Orders"</strong>.<br>
+      2. Change order status from <em>"Pending"</em> to <em>"Shipped"</em> using the dropdown.<br>
+      3. Click <strong>"My Account Settings"</strong> tab, edit the display name (e.g. <em>"John Developer"</em>), click Save.<br>
+      4. Show the header welcome message updating immediately.
+    </div>
+    <div class="box box-code">
+      <span class="label label-code">Code Location in VS Code</span>
+      <code>server/server.js</code> line 360 (<code>WHERE user_id = req.user.id</code>) &amp; line 438 (re-issued token)
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script</span>
+      "Here in Order History, users can track and update the status of their orders.<br><br>
+      To enforce <strong>Data Ownership and User Privacy</strong>, all order routes are protected by our <code>authenticateToken</code> middleware. Queries explicitly filter by <code>WHERE user_id = req.user.id</code>. Even if someone knows another user's order ID, the API will never expose or alter orders belonging to another account.<br><br>
+      Under Account Settings, updating the user's name updates MySQL and immediately returns a freshly re-signed JWT token containing the new name, updating the UI header seamlessly without requiring a re-login."
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SEGMENT 6 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">6. Conclusion &amp; Open for Defense</div>
+      <span class="time-tag">6:15 – 7:00</span>
+    </div>
+    <div class="box box-speech">
+      <span class="label label-speech">Spoken Script</span>
+      "To summarize our implementation:
+      <ul>
+        <li>A fully integrated full-stack web application using React 19, Node.js Express, and MySQL.</li>
+        <li>Enterprise-grade security: bcrypt password hashing, stateless JWT authentication, and parameterized SQL queries.</li>
+        <li>Data integrity through ACID database transactions with row-level locking (<code>FOR UPDATE</code>) and dual-layer validation with Zod.</li>
+      </ul>
+      Thank you very much, Professor! We are now open for your questions."
+    </div>
+  </div>
+
+  <h2 style="font-size: 13pt; margin: 18px 0 8px 0; color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">
+    🎯 Professor Oral Defense Cheat Sheet (Fast Answers)
+  </h2>
+
+  <table class="qa-table">
+    <thead>
+      <tr>
+        <th>Likely Professor Question</th>
+        <th>Precise Technical Answer to Give</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="q">Why use Database Transactions during checkout?</td>
+        <td class="a">"To guarantee the Atomicity property of ACID. If product stock deduction fails after inserting the order header, <code>connection.rollback()</code> cancels everything so our database is never left in an inconsistent state."</td>
+      </tr>
+      <tr>
+        <td class="q">What does <code>FOR UPDATE</code> do?</td>
+        <td class="a">"It applies an exclusive row-level lock in MySQL during the checkout transaction. This prevents Race Conditions and overselling when two users try to purchase the last unit at the exact same millisecond."</td>
+      </tr>
+      <tr>
+        <td class="q">Can a user spoof product prices from Chrome DevTools?</td>
+        <td class="a">"No. Our backend enforces Server-Side Price Calculation. It ignores client prices and re-reads the official price directly from the MySQL <code>products</code> table."</td>
+      </tr>
+      <tr>
+        <td class="q">How does login verify a password if it's hashed?</td>
+        <td class="a">"We use <code>bcrypt.compare()</code>. It hashes the entered password using the salt stored in the hash and compares the result, without ever needing to decrypt the stored hash."</td>
+      </tr>
+      <tr>
+        <td class="q">Why use JWT instead of traditional sessions?</td>
+        <td class="a">"JWTs are stateless and self-contained. The server does not need to maintain session memory or hit a session database for every request; it simply verifies the cryptographic signature with our secret."</td>
+      </tr>
+      <tr>
+        <td class="q">How do you prevent SQL Injection?</td>
+        <td class="a">"All SQL queries use parameterized prepared statements with <code>?</code> placeholders. User input is treated strictly as data literals, never as executable SQL commands."</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tip-box">
+    <strong>💡 Presentation Tips for Tomorrow:</strong>
+    <ol style="margin-left: 18px; margin-top: 4px;">
+      <li>Ensure MySQL, backend (<code>npm run dev --prefix server</code>), and client (<code>npm run dev --prefix client</code>) are already running before you enter the room.</li>
+      <li>Have one test account already registered so you don't waste time typing during the intro.</li>
+      <li>If the professor asks you to show the database, open MySQL Workbench / HeidiSQL and show <code>checkout_orders</code> and <code>order_items</code> with the foreign key relation.</li>
+    </ol>
+  </div>
+
+</body>
+</html>
+

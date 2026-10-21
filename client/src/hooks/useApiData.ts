@@ -7,10 +7,10 @@ import { api, getApiErrorMessage } from "../api/axios";
 // This interface describes what the hook returns to whoever calls it.
 // T is a generic type — it gets filled in with Product, Order, etc. at call time.
 interface ApiDataState<T> {
-  data: T[];         // the fetched items
-  loading: boolean;  // true while the request is in flight
-  error: string | null; // error message if the request failed
-  refresh: () => void;  // call this to re-fetch the data
+  data: T[];         // The list of items returned from MySQL (e.g. products or orders).
+  loading: boolean;  // while the data is traveling over the network, so the UI can show "Loading products...".
+  error: string | null; // Holds the error message if the database or server is down.
+  refresh: () => void;  // A function you can call anytime to reload the data (for example, right after placing an order, calling refresh() immediately re-fetches the updated orders list).
 }
 
 // The hook accepts a path (like "/products"), an optional auth token, and an optional userId.
