@@ -186,16 +186,6 @@ body {
     transform: translateY(0);
   }
 }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%);
-  }
-}
 
 /* Shared feedback styles for API and per-field validation errors. */
 .error-message {

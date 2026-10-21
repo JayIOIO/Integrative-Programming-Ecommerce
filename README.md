@@ -279,6 +279,4 @@ Phone numbers are stored independently in `checkout_orders.phone`, not appended 
 | --- | --- | --- |
 | Mhersan John Salenga | Full-stack developer | [@JayIOIO](https://github.com/JayIOIO) |
 
-## License
-
-*License to be added.*
+> **?? AI-Assisted Project** � This codebase was developed with the assistance of AI tools (Google Antigravity / Copilot). All logic, structure, and implementation decisions were reviewed, tested, and understood by the author.

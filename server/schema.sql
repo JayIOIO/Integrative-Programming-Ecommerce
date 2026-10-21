@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS checkout_orders (
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Migration for existing databases that were created before the phone column was added:
+-- ALTER TABLE checkout_orders ADD COLUMN phone VARCHAR(30) NULL AFTER address;
+
 -- Each row records a purchased product and its price at the time of the order.
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,

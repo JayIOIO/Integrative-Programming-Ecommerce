@@ -1,9 +1,16 @@
+// React hooks for component state, side effects, and form event types
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+// Connects Zod validation schemas to React Hook Form
 import { zodResolver } from "@hookform/resolvers/zod";
+// Lightweight form management library for validation, errors, and input registration
 import { useForm } from "react-hook-form";
+// Our configured axios instance and error parsing helper functions
 import { api, getApiErrorMessage, getApiFieldErrors } from "./api/axios";
+// Reusable custom hook for fetching data (products, orders) with loading and error states
 import { useApiData } from "./hooks/useApiData";
+// Zod schemas defining rules for checkout, login/signup, and profile updates
 import { checkoutSchema, createAuthSchema, profileSchema } from "./validation/schemas";
+// TypeScript type definitions for all our data models and form values
 import type {
   AuthForm,
   CartItem,
@@ -14,15 +21,20 @@ import type {
   StoreTab,
   User,
 } from "./types";
+// Main stylesheet containing Shopee-inspired colors, card layouts, and responsive styles
 import "./App.css";
 
-// Restore a session only when the saved user record has the fields the UI relies on.
+// Read and validate the saved user session from browser localStorage on startup.
+// If the stored data is corrupted or missing required fields, wipe it and return null.
 function readStoredUser(): User | null {
+  // Check if there is a saved "user" key in localStorage
   const storedUser = localStorage.getItem("user");
-  if (!storedUser) return null;
+  if (!storedUser) return null; // No user logged in previously
 
   try {
+    // Parse the JSON string back into a JavaScript object
     const parsed: unknown = JSON.parse(storedUser);
+    // Strict runtime check to ensure id, name, and email all exist with valid types
     if (
       typeof parsed === "object" &&
       parsed !== null &&
@@ -33,28 +45,34 @@ function readStoredUser(): User | null {
       typeof parsed.name === "string" &&
       typeof parsed.email === "string"
     ) {
-      return parsed as User;
+      return parsed as User; // Safe to cast and use as our User type
     }
   } catch (error) {
+    // If JSON parsing fails (e.g. malformed data), log it for debugging
     console.error("Stored user data could not be read:", error);
   }
 
+  // Clear corrupted data so it doesn't break future sessions
   localStorage.removeItem("user");
   return null;
 }
 
-// Keep each account's cart separate when multiple people use the same browser.
+// Generates a unique localStorage key per user account (e.g., "cart:1", "cart:2").
+// This ensures that different users logging in on the same computer don't see each other's carts.
 function getCartStorageKey(userId: number): string {
   return `cart:${userId}`;
 }
 
-// Local storage is untyped, so validate saved cart data before using it in the UI.
+// Retrieves and parses the user's cart from localStorage.
+// Every item is validated to make sure it has valid id, name, price, and positive quantity.
 function readStoredCart(userId: number): CartItem[] {
+  // Grab the cart items specifically saved for this user's ID
   const storedCart = localStorage.getItem(getCartStorageKey(userId));
-  if (!storedCart) return [];
+  if (!storedCart) return []; // Empty cart if nothing was saved
 
   try {
     const parsed: unknown = JSON.parse(storedCart);
+    // Verify that the parsed data is an array and every element matches the CartItem shape
     if (
       Array.isArray(parsed) &&
       parsed.every(
@@ -79,26 +97,41 @@ function readStoredCart(userId: number): CartItem[] {
     console.error("Stored cart data could not be read:", error);
   }
 
+  // Remove bad cart data if validation fails
   localStorage.removeItem(getCartStorageKey(userId));
   return [];
 }
 
+// Main application component
 function App() {
+  // Authentication state: JWT token stored in localStorage, empty string if logged out
   const [token, setToken] = useState(() => localStorage.getItem("token") ?? "");
+  // Current logged-in user profile, initialized from validated localStorage data
   const [user, setUser] = useState<User | null>(readStoredUser);
+  // Toggle between Login form (false) and Sign-Up form (true)
   const [isSignup, setIsSignup] = useState(false);
+  // Controls which tab is active: "shop" (products), "cart", "orders", or "profile"
   const [activeTab, setActiveTab] = useState<StoreTab>("shop");
+
+  // Search input state for product name or description
   const [productSearch, setProductSearch] = useState("");
+  // Filter input state for minimum price
   const [minProductPrice, setMinProductPrice] = useState("");
+  // Filter input state for maximum price
   const [maxProductPrice, setMaxProductPrice] = useState("");
+  // Applied filters that actually trigger the backend search when the user clicks "Search"
   const [appliedProductFilters, setAppliedProductFilters] = useState({
     search: "",
     minPrice: "",
     maxPrice: "",
   });
+
+  // Shopping cart items list, initialized from the logged-in user's stored cart
   const [cart, setCart] = useState<CartItem[]>(() =>
     user ? readStoredCart(user.id) : [],
   );
+
+  // Controlled form state for the shipping and payment checkout inputs
   const [checkoutData, setCheckoutData] = useState<CheckoutForm>({
     customerName: user?.name ?? "",
     address: "",
@@ -108,32 +141,41 @@ function App() {
     phone: "",
     payment_method: "Credit Card",
   });
+
+  // React Hook Form for handling user sign-in and sign-up with dynamic Zod validation
   const authForm = useForm<AuthForm>({
     resolver: zodResolver(createAuthSchema(isSignup)),
     defaultValues: { name: "", email: "", password: "" },
-    mode: "onBlur",
+    mode: "onBlur", // validate fields when the user clicks out of the input
   });
+
+  // React Hook Form for updating account display name under settings
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: { name: user?.name ?? "" },
     mode: "onBlur",
   });
-  // Keep request, validation, and pending-submit feedback separate for each view.
+
+  // Banner error message for API failures (e.g., server down, invalid login)
   const [actionError, setActionError] = useState<string | null>(null);
+  // Temporary popup toast message for successful actions (e.g. "Added to cart", "Order placed")
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+  // Per-field validation errors for the checkout form (address, phone, city, etc.)
   const [checkoutErrors, setCheckoutErrors] = useState<
     Partial<Record<keyof CheckoutForm | "cartItems", string>>
   >({});
+  // Disables submit buttons and shows loading text while an API request is in progress
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Automatically dismiss the confirmation toast notification after ~2.8 seconds
   useEffect(() => {
     if (!confirmationMessage) return;
 
     const timeoutId = window.setTimeout(() => setConfirmationMessage(null), 2800);
-    return () => window.clearTimeout(timeoutId);
+    return () => window.clearTimeout(timeoutId); // Clean up timer if message changes or unmounts
   }, [confirmationMessage]);
 
-  // Keep the catalog and signed-in user's orders synchronized with the API.
+  // Construct URL query parameters for product searching and price filtering
   const productQuery = new URLSearchParams();
   if (appliedProductFilters.search) {
     productQuery.set("search", appliedProductFilters.search);
@@ -144,12 +186,16 @@ function App() {
   if (appliedProductFilters.maxPrice) {
     productQuery.set("maxPrice", appliedProductFilters.maxPrice);
   }
+
+  // Fetch product catalog from GET /api/products (with any active search/price queries)
   const {
     data: products,
     loading: productsLoading,
     error: productsError,
     refresh: refreshProducts,
   } = useApiData<Product>(`/products${productQuery.size ? `?${productQuery}` : ""}`);
+
+  // Fetch orders for the current user from GET /api/orders (only when logged in with a token)
   const {
     data: orders,
     loading: ordersLoading,
@@ -157,24 +203,30 @@ function App() {
     refresh: refreshOrders,
   } = useApiData<Order>(token ? "/orders" : null, token, user?.id);
 
-  // Persist cart changes without clearing the saved copy during logout.
+  // Whenever cart items change, synchronize and save them into localStorage under the user's ID
   useEffect(() => {
     if (user) {
       localStorage.setItem(getCartStorageKey(user.id), JSON.stringify(cart));
     }
   }, [cart, user]);
 
+  // Calculate the total cost of all items currently in the shopping cart
   const cartTotal = cart.reduce(
     (total, item) => total + Number(item.price) * item.quantity,
     0,
   );
+
+  // Authorization headers for protected backend endpoints requiring Bearer token
   const authConfig = { headers: { Authorization: `Bearer ${token}` } };
 
+  // Handles text changes in checkout inputs (name, address, phone, city, payment method)
   const handleCheckoutChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.currentTarget;
+    // Update the field value in component state
     setCheckoutData((previous) => ({ ...previous, [name]: value }));
+    // Clear the error on this specific field as soon as the user starts editing it
     setCheckoutErrors((previous) => ({
       ...previous,
       [name]: undefined,
@@ -183,6 +235,7 @@ function App() {
     setActionError(null);
   };
 
+  // Triggers catalog search and filtering when the search form is submitted
   const handleProductSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAppliedProductFilters({
@@ -192,6 +245,7 @@ function App() {
     });
   };
 
+  // Clears all search and filter input fields and restores the full product catalog view
   const clearProductFilters = () => {
     setProductSearch("");
     setMinProductPrice("");
@@ -199,7 +253,7 @@ function App() {
     setAppliedProductFilters({ search: "", minPrice: "", maxPrice: "" });
   };
 
-  // Cart updates use functional state setters to avoid stale values between clicks.
+  // Adds an item to the cart, or increments its quantity by 1 if it's already in the cart
   const addToCart = (product: Product) => {
     setCart((previous) => {
       const existingItem = previous.find((item) => item.id === product.id);
@@ -209,13 +263,16 @@ function App() {
           )
         : [...previous, { ...product, quantity: 1 }];
     });
+    // Trigger the bottom-right toast confirmation
     setConfirmationMessage(`${product.name} added to your cart.`);
   };
 
+  // Completely removes a product from the shopping cart
   const removeFromCart = (productId: number) => {
     setCart((previous) => previous.filter((item) => item.id !== productId));
   };
 
+  // Updates an item's quantity by a positive or negative delta (ensures minimum of 1)
   const updateQuantity = (productId: number, delta: number) => {
     setCart((previous) =>
       previous.map((item) =>
@@ -226,28 +283,37 @@ function App() {
     );
   };
 
-  // Zod validates the form before the credentials are sent to the server.
+  // Submits login or signup credentials to the Express backend
   const handleAuthSubmit = async (authData: AuthForm) => {
     setActionError(null);
     setIsSubmitting(true);
 
     try {
-      // Restore the cart belonging to the account that just authenticated.
+      // Pick the correct endpoint depending on whether the user is signing up or logging in
       const endpoint = isSignup ? "/auth/signup" : "/auth/login";
       const response = await api.post<{ token: string; user: User }>(endpoint, authData);
+
+      // Save token and user details to localStorage so they persist across page refreshes
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
+
+      // Update React state with the authenticated session
       setToken(response.data.token);
       setUser(response.data.user);
+      // Load any existing cart saved for this specific user
       setCart(readStoredCart(response.data.user.id));
+      // Pre-fill the customer's name in checkout form
       setCheckoutData((previous) => ({ ...previous, customerName: response.data.user.name }));
+      // Pre-fill profile settings with the user's name
       profileForm.reset({ name: response.data.user.name });
       authForm.reset();
     } catch (error: unknown) {
+      // Extract field-specific errors returned from the server (e.g. duplicate email)
       const fields = getApiFieldErrors(error);
       for (const field of ["name", "email", "password"] as const) {
         if (fields[field]) authForm.setError(field, { message: fields[field] });
       }
+      // If there are no specific field errors, display a general banner error message
       if (Object.keys(fields).length === 0) {
         setActionError(getApiErrorMessage(error, "Authentication failed."));
       }
@@ -256,23 +322,27 @@ function App() {
     }
   };
 
+  // Logs the user out by clearing tokens and resetting user-specific state
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken("");
     setUser(null);
-    // The cart is already saved under this user's ID and will be restored on login.
+    // Note: the cart remains safely saved under cart:<userId> in localStorage for next login
     setCart([]);
     setActiveTab("shop");
     setActionError(null);
   };
 
-  // The API recalculates prices and totals from MySQL before saving the order.
+  // Validates checkout details with Zod and sends the order to POST /api/orders
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const errors: Partial<Record<keyof CheckoutForm | "cartItems", string>> = {};
+
+    // Validate form inputs (name, address, city, province, postal code, phone, payment) against Zod schema
     const validation = checkoutSchema.safeParse(checkoutData);
     if (!validation.success) {
+      // Map Zod validation errors to our local state so red error messages appear under each field
       for (const issue of validation.error.issues) {
         const field = issue.path[0];
         if (
@@ -289,20 +359,28 @@ function App() {
         }
       }
     }
+
+    // Ensure the cart actually has items before checking out
     if (cart.length === 0) errors.cartItems = "Add at least one item before checkout.";
     setCheckoutErrors(errors);
+
+    // Stop submission if validation failed
     if (!validation.success || Object.keys(errors).length > 0) return;
 
     const shippingDetails = validation.data;
+    // Format the full delivery address as a comma-separated string for the database
     const shippingAddress = [
       shippingDetails.address,
       shippingDetails.city,
       shippingDetails.province,
       shippingDetails.postalCode,
     ].join(", ");
+
     setActionError(null);
     setIsSubmitting(true);
+
     try {
+      // Send the order to the backend API; backend verifies stock and calculates prices in a transaction
       await api.post(
         "/orders",
         {
@@ -315,8 +393,10 @@ function App() {
         },
         authConfig,
       );
-      // Clear the local cart only after the server confirms the order was saved.
+
+      // Clear the local shopping cart now that order is confirmed
       setCart([]);
+      // Reset checkout input fields
       setCheckoutData({
         customerName: user?.name ?? "",
         address: "",
@@ -326,11 +406,14 @@ function App() {
         phone: "",
         payment_method: "Credit Card",
       });
+      // Refresh order history and product stock counts
       refreshOrders();
       refreshProducts();
+      // Switch view to the "orders" tab to show the placed order
       setActiveTab("orders");
       setConfirmationMessage("Order placed successfully!");
     } catch (error: unknown) {
+      // Handle server-side errors (e.g. out of stock, invalid inputs)
       const fields = getApiFieldErrors(error);
       setCheckoutErrors({
         customerName: fields.customer_name,
@@ -347,30 +430,31 @@ function App() {
     }
   };
 
+  // Sends PUT /api/orders/:id to change an order status (Pending, Processing, Shipped, Delivered)
   const handleUpdateOrderStatus = async (orderId: number, status: string) => {
     setActionError(null);
     try {
       await api.put(`/orders/${orderId}`, { status }, authConfig);
-      refreshOrders();
+      refreshOrders(); // Re-fetch updated orders
     } catch (error: unknown) {
       setActionError(getApiErrorMessage(error, "Failed to update order status."));
     }
   };
 
-  // Ask before the irreversible delete, then refresh the list after success.
+  // Prompts user for confirmation, then sends DELETE /api/orders/:id to cancel an order
   const handleDeleteOrder = async (orderId: number) => {
     if (!window.confirm("Are you sure you want to cancel and delete this order?")) return;
 
     setActionError(null);
     try {
       await api.delete(`/orders/${orderId}`, authConfig);
-      refreshOrders();
+      refreshOrders(); // Re-fetch orders after deletion
     } catch (error: unknown) {
       setActionError(getApiErrorMessage(error, "Failed to delete order."));
     }
   };
 
-  // The API returns a replacement JWT because the user's name is part of its claims.
+  // Sends PUT /api/auth/profile to update the user's name and receives a fresh JWT token
   const handleUpdateProfile = async (profileData: ProfileForm) => {
     setActionError(null);
     setIsSubmitting(true);
@@ -380,8 +464,10 @@ function App() {
         { name: profileData.name },
         authConfig,
       );
+      // Store the new JWT token containing the updated name in localStorage
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
+      // Update app state
       setToken(response.data.token);
       setUser(response.data.user);
       setCheckoutData((previous) => ({ ...previous, customerName: response.data.user.name }));
@@ -395,21 +481,25 @@ function App() {
     }
   };
 
+  // If there is no active JWT token, render the authentication view (Login / Register)
   if (!token) {
-    // Guests see the sign-in / registration form until authentication succeeds.
     return (
       <div className="auth-wrapper">
         <div className="auth-card">
+          {/* Header with Shopee branding and current mode title */}
           <div className="auth-header">
             <h1>🛍 Shopee Clone</h1>
             <p>{isSignup ? "Create your new account" : "Log in to start shopping"}</p>
           </div>
+
+          {/* Login / Signup form handled by React Hook Form */}
           <form
             onSubmit={authForm.handleSubmit(handleAuthSubmit)}
             onChange={() => setActionError(null)}
             className="auth-form"
             noValidate
           >
+            {/* Full Name input: only shown during sign up */}
             {isSignup && (
               <input
                 {...authForm.register("name")}
@@ -422,6 +512,8 @@ function App() {
             {isSignup && authForm.formState.errors.name && (
               <small className="field-error">{authForm.formState.errors.name.message}</small>
             )}
+
+            {/* Email input field */}
             <input
               {...authForm.register("email")}
               type="email"
@@ -433,6 +525,8 @@ function App() {
             {authForm.formState.errors.email && (
               <small className="field-error">{authForm.formState.errors.email.message}</small>
             )}
+
+            {/* Password input field */}
             <input
               {...authForm.register("password")}
               type="password"
@@ -444,11 +538,17 @@ function App() {
             {authForm.formState.errors.password && (
               <small className="field-error">{authForm.formState.errors.password.message}</small>
             )}
+
+            {/* Banner error display for invalid credentials or server errors */}
             {actionError && <p className="status-message error-message" role="alert">{actionError}</p>}
+
+            {/* Submit button with loading state */}
             <button type="submit" className="auth-button" disabled={isSubmitting}>
               {isSubmitting ? "Please wait..." : isSignup ? "Sign Up" : "Log In"}
             </button>
           </form>
+
+          {/* Toggle between Sign In and Sign Up modes */}
           <div className="auth-toggle-container">
             <button
               onClick={() => {
@@ -467,6 +567,7 @@ function App() {
     );
   }
 
+  // Navigation tab definitions with live item count badges
   const tabs: { id: StoreTab; label: string }[] = [
     { id: "shop", label: "Mall Products" },
     { id: "cart", label: `My Cart (${cart.reduce((sum, item) => sum + item.quantity, 0)})` },
@@ -474,8 +575,10 @@ function App() {
     { id: "profile", label: "My Account Settings" },
   ];
 
+  // Main authenticated application view
   return (
     <div>
+      {/* Top navigation header with logo and user logout */}
       <header className="shopee-header">
         <div className="header-container">
           <h2 className="brand-title" onClick={() => setActiveTab("shop")}>
@@ -488,6 +591,7 @@ function App() {
         </div>
       </header>
 
+      {/* Main navigation bar for switching between store tabs */}
       <nav className="shopee-nav">
         <div className="nav-container">
           {tabs.map((tab) => (
@@ -502,6 +606,7 @@ function App() {
         </div>
       </nav>
 
+      {/* Bottom-right toast notification for cart additions and orders */}
       {confirmationMessage && (
         <div className="confirmation-toast" role="status" aria-live="polite">
           <span className="confirmation-toast-icon" aria-hidden="true">✓</span>
@@ -509,12 +614,15 @@ function App() {
         </div>
       )}
 
+      {/* Main content area */}
       <main className="main-container">
+        {/* Banner error message if an action fails */}
         {actionError && <p className="status-message error-message" role="alert">{actionError}</p>}
 
-        {/* Product catalog loaded by the shared API data hook. */}
+        {/* TAB 1: PRODUCT CATALOG & SEARCH */}
         {activeTab === "shop" && (
           <>
+            {/* Search and price filter controls */}
             <form className="product-filters" onSubmit={handleProductSearch}>
               <label>
                 <span>Search products</span>
@@ -553,6 +661,8 @@ function App() {
                 Clear
               </button>
             </form>
+
+            {/* Loading and error feedback for products */}
             {productsLoading && <p className="status-message" role="status">Loading products...</p>}
             {productsError && <p className="status-message error-message" role="alert">{productsError}</p>}
             {!productsLoading && !productsError && products.length === 0 && (
@@ -562,6 +672,8 @@ function App() {
                   : "No products are available right now."}
               </p>
             )}
+
+            {/* Responsive product cards grid */}
             <div className="product-grid">
               {products.map((product) => (
                 <div key={product.id} className="product-card">
@@ -584,10 +696,11 @@ function App() {
           </>
         )}
 
-        {/* Cart controls and checkout form. */}
+        {/* TAB 2: CART & CHECKOUT FORM */}
         {activeTab === "cart" && (
           <div>
             {cart.length === 0 ? (
+              // Empty cart placeholder with a quick link back to shopping
               <div className="empty-cart">
                 <p>Your shopping cart is currently empty.</p>
                 <button
@@ -599,7 +712,9 @@ function App() {
                 </button>
               </div>
             ) : (
+              // Two-column layout: Cart items on the left, Checkout form on the right
               <div className="cart-layout">
+                {/* List of items currently in the cart */}
                 <div className="cart-card">
                   <h3 className="card-title">Cart Items</h3>
                   {cart.map((item) => (
@@ -608,28 +723,35 @@ function App() {
                         <h4 style={{ fontSize: "14px" }}>{item.name}</h4>
                         <small style={{ color: "#888" }}>${Number(item.price).toFixed(2)}</small>
                       </div>
+                      {/* Quantity stepper buttons (- and +) */}
                       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px" }}>
                         <button onClick={() => updateQuantity(item.id, -1)} className="qty-btn">-</button>
                         <span>{item.quantity}</span>
                         <button onClick={() => updateQuantity(item.id, 1)} className="qty-btn">+</button>
                       </div>
+                      {/* Item subtotal */}
                       <div style={{ flex: 1, textAlign: "right", fontWeight: "bold", color: "#ee4d2d" }}>
                         ${(Number(item.price) * item.quantity).toFixed(2)}
                       </div>
+                      {/* Remove item button */}
                       <button onClick={() => removeFromCart(item.id)} className="btn-remove">✕</button>
                     </div>
                   ))}
                 </div>
 
+                {/* Checkout card with address, contact, and payment fields */}
                 <div className="checkout-card">
                   <h3 className="card-title">Checkout</h3>
                   <div className="checkout-total">
                     <span>Total Pay:</span>
                     <span style={{ color: "#ee4d2d" }}>${cartTotal.toFixed(2)}</span>
                   </div>
+
                   <form onSubmit={handleCheckoutSubmit} className="checkout-form" noValidate>
                     <h4>Shipping details</h4>
                     <p className="checkout-hint">Delivery addresses must be in the Philippines.</p>
+
+                    {/* Customer recipient name */}
                     <label className="form-label" htmlFor="checkout-customer-name">CUSTOMER NAME</label>
                     <input
                       id="checkout-customer-name"
@@ -646,6 +768,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.customerName}</small>
                     )}
 
+                    {/* Street address */}
                     <label className="form-label" htmlFor="shipping-address">STREET ADDRESS</label>
                     <input
                       id="shipping-address"
@@ -662,6 +785,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.address}</small>
                     )}
 
+                    {/* City / Municipality */}
                     <label className="form-label" htmlFor="shipping-city">CITY</label>
                     <input
                       id="shipping-city"
@@ -679,6 +803,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.city}</small>
                     )}
 
+                    {/* Province or Region */}
                     <label className="form-label" htmlFor="shipping-province">PROVINCE / REGION</label>
                     <input
                       id="shipping-province"
@@ -696,6 +821,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.province}</small>
                     )}
 
+                    {/* 4-digit Philippine Postal code */}
                     <label className="form-label" htmlFor="shipping-postal-code">POSTAL CODE</label>
                     <input
                       id="shipping-postal-code"
@@ -715,6 +841,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.postalCode}</small>
                     )}
 
+                    {/* Contact Phone number */}
                     <label className="form-label" htmlFor="shipping-phone">PHONE NUMBER</label>
                     <input
                       id="shipping-phone"
@@ -732,6 +859,7 @@ function App() {
                       <small className="field-error">{checkoutErrors.phone}</small>
                     )}
 
+                    {/* Payment method selection dropdown */}
                     <label className="form-label" htmlFor="payment-method">PAYMENT METHOD</label>
                     <select
                       id="payment-method"
@@ -751,6 +879,8 @@ function App() {
                     {checkoutErrors.cartItems && (
                       <small className="field-error">{checkoutErrors.cartItems}</small>
                     )}
+
+                    {/* Submit order button */}
                     <button type="submit" className="btn-submit" disabled={isSubmitting}>
                       {isSubmitting ? "Placing order..." : "Place Order"}
                     </button>
@@ -761,18 +891,22 @@ function App() {
           </div>
         )}
 
-        {/* Orders are scoped to the signed-in user by the server. */}
+        {/* TAB 3: ORDER HISTORY & STATUS MANAGEMENT */}
         {activeTab === "orders" && (
           <div className="orders-card">
             <h3 className="card-title">Order History</h3>
+            {/* Loading and empty states */}
             {ordersLoading && <p className="status-message" role="status">Loading orders...</p>}
             {ordersError && <p className="status-message error-message" role="alert">{ordersError}</p>}
             {!ordersLoading && !ordersError && orders.length === 0 && (
               <p style={{ color: "#888" }}>No order records found.</p>
             )}
+
+            {/* List of user orders */}
             <div className="orders-list">
               {orders.map((order) => (
                 <div key={order.id} className="order-item-card">
+                  {/* Order summary info */}
                   <div>
                     <h4 style={{ margin: "0 0 5px 0" }}>Order #{order.id}</h4>
                     <p style={{ fontSize: "13px", color: "#555" }}>Customer: {order.customer_name}</p>
@@ -785,6 +919,8 @@ function App() {
                       Total: ${Number(order.total_amount).toFixed(2)}
                     </strong>
                   </div>
+
+                  {/* Order controls: status update dropdown and cancel/delete button */}
                   <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                     <div>
                       <label
@@ -822,7 +958,7 @@ function App() {
           </div>
         )}
 
-        {/* Profile updates return a new token containing the updated display name. */}
+        {/* TAB 4: ACCOUNT PROFILE SETTINGS */}
         {activeTab === "profile" && (
           <div className="profile-card" style={{ maxWidth: "500px", margin: "0 auto" }}>
             <h3 className="card-title">Account Settings</h3>
@@ -831,6 +967,7 @@ function App() {
               className="checkout-form"
               noValidate
             >
+              {/* Display user's email as read-only */}
               <div>
                 <label className="form-label" htmlFor="profile-email">Email Address (Read-only)</label>
                 <input
@@ -842,6 +979,8 @@ function App() {
                   style={{ background: "#f5f5f5", border: "1px solid #eee" }}
                 />
               </div>
+
+              {/* Editable display name */}
               <div>
                 <label className="form-label" htmlFor="profile-name">Full Name</label>
                 <input
@@ -856,7 +995,9 @@ function App() {
                   <small className="field-error">{profileForm.formState.errors.name.message}</small>
                 )}
               </div>
-              <button type="submit" className="btn-submit" disabled={isSubmitting}>
+
+              {/* Submit button for saving profile changes */}
+               <button type="submit" className="btn-submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Profile Changes"}
               </button>
             </form>
